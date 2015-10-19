@@ -30,15 +30,7 @@ def hough_p(edges, output, threshold, min_line_length, max_line_gap):
     lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold, \
         min_line_length, max_line_gap)
 
-    for x1,y1,x2,y2 in lines[0]:
-        cv2.line(output, (x1,y1), (x2,y2), (0,255,0), 1)
-
-    calc = lambda line: ((line[0] - line[2])**2 + (line[1] - line[3])**2)**.5
-    lines_sum = sum([calc(line) for line in lines[0]])
-
-    lines_avg = np.mean([calc(line) for line in lines[0]])
-
-    return len(lines[0]), lines_sum, lines_avg
+    return lines[0]
 
 def show(img, window_name):
     cv2.imshow(window_name, img)
@@ -67,7 +59,9 @@ def test(t, ml, mg):
 
     show(c, 'canny')
 
-def get_video():
+def get_video(smoothing=5):
+
+    lines_queue = []
 
     cv2.namedWindow('preview')
     vc = cv2.VideoCapture(0)
@@ -87,7 +81,27 @@ def get_video():
         f = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         f = cv2.cvtColor(f, cv2.COLOR_GRAY2RGB)
         
-        hough_p(canny_edges, f, 150, 10, 10)
+        lines_queue.append(hough_p(canny_edges, f, 150, 10, 30))
+
+        # while we have less than 5 sets of lines in buffer, move on
+        if len(lines_queue) < smoothing:
+            continue
+        else:
+
+            # take last five frames
+            #lastn = lines_queue[-smoothing:]
+
+            # combine coordinates
+
+            # lines_all = [cv2.line(f, (x1,y1), (x2,y2), (0,0,255), 1) \
+                # for (x1,y1,x2,y2) in lines for lines in lastn]
+
+            for lines in lines_queue:
+                for x1,y1,x2,y2 in lines:
+                    cv2.line(f, (x1,y1), (x2,y2), (0,0,255), 1)
+
+            lines_queue.pop(0)
+
 
         cv2.imshow('preview', f)
         rval, frame = vc.read()
