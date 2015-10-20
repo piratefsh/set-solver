@@ -17,6 +17,8 @@ def show(img, window_name):
 def destroy(window_name):
     cv2.destroyWindow(window_name)
 
+# (Stolen) utility code from 
+# http://git.io/vGi60A
 def rectify(h):
     h = h.reshape((4,2))
     hnew = np.zeros((4,2),dtype = np.float32)
