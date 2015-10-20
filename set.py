@@ -51,10 +51,15 @@ def transform_card(card, image):
     warp = cv2.warpPerspective(image, transformation, SIZE_CARD)
     return warp 
 
-def find_contours(bin_img, num=-1):
+def find_contours(bin_img, num=-1, return_area=False):
     contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:num]
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
+    # if return_area:
+    #     return [(x, cv2.contourArea(x)) for x in contours]
+
+    # else:
+    if num > 0: return contours[:num]
     return contours
 
 def get_binary(img, thresh=180):
@@ -73,7 +78,7 @@ def get_card_color(card):
     blue = [pix[0] for row in card for pix in row ]
     green = [pix[1]  for row in card for pix in row ]
     red = [pix[2] for row in card for pix in row ]
-    
+
     bgr = (min(blue), min(green), min(red))
     b, g, r = bgr 
 
@@ -83,6 +88,17 @@ def get_card_color(card):
         return 'red'
 
     return 'purple' 
+
+def get_card_shape(card):
+    binary = get_binary(card, thresh=150)
+    util.show(binary)
+    contours = find_contours(binary)
+
+    contours_area = [cv2.contourArea(c) for c in contours]
+
+    cv2.drawContours(card, contours, -1, COLOR_RED)
+    util.show(card)
+    return contours
 
 def test():
     # 3 cards on flat table
@@ -114,3 +130,4 @@ def test():
     for link in os.listdir('images/cards'):
         img = cv2.imread('images/cards/%s' % link)
         print get_card_color(img)
+        print len(get_card_shape(img))

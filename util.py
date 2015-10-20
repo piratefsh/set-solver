@@ -1,7 +1,7 @@
 import cv2 
 import numpy as np
 
-def show(img, window_name):
+def show(img, window_name='main'):
     # destroy existing window
     destroy(window_name)
 
