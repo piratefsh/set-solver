@@ -3,11 +3,12 @@ import sys
 import numpy as np 
 
 def canny(img):
-    edges = cv2.Canny(img, threshold1=200, threshold2=100)
+    edges = cv2.Canny(img, threshold1=200, threshold2=40)
 
     return edges 
 
 def hough(edges, output, threshold):
+
     lines = cv2.HoughLines(edges, 1, np.pi/180, threshold)
 
     for rho, theta in lines[0]:
@@ -30,7 +31,9 @@ def hough_p(edges, output, threshold, min_line_length, max_line_gap):
     lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold, \
         min_line_length, max_line_gap)
 
-    return lines[0]
+    if lines is not None and len(lines) > 0:
+        return lines[0]
+    return []
 
 def show(img, window_name):
     cv2.imshow(window_name, img)
@@ -91,14 +94,10 @@ def get_video(smoothing=5):
             # take last five frames
             #lastn = lines_queue[-smoothing:]
 
-            # combine coordinates
-
-            # lines_all = [cv2.line(f, (x1,y1), (x2,y2), (0,0,255), 1) \
-                # for (x1,y1,x2,y2) in lines for lines in lastn]
-
+            # draw all lines
             for lines in lines_queue:
                 for x1,y1,x2,y2 in lines:
-                    cv2.line(f, (x1,y1), (x2,y2), (0,0,255), 1)
+                    cv2.line(f, (x1,y1), (x2,y2), (0,0,255), 2)
 
             lines_queue.pop(0)
 
