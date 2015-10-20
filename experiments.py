@@ -1,15 +1,22 @@
 import cv2
+import cv2.cv as cv
 import sys
 import numpy as np 
 
 def canny(img):
-    edges = cv2.Canny(img, threshold1=200, threshold2=40)
+    blurred = cv2.GaussianBlur(img, ksize=(5,5), sigmaX=0)
+    edges = cv2.Canny(blurred, threshold1=200, threshold2=30)
 
     return edges 
 
 def hough(edges, output, threshold):
 
     lines = cv2.HoughLines(edges, 1, np.pi/180, threshold)
+
+    points = []
+
+    if lines is None or len(lines) < 1:
+        return points
 
     for rho, theta in lines[0]:
         a = np.cos(theta)
@@ -23,8 +30,9 @@ def hough(edges, output, threshold):
         x2 = int(x0 - 1000*(-b))
         y2 = int(y0 - 1000*(a))
 
-        cv2.line(output, (x1,y1), (x2,y2), (0,0,255), 1)
-    return
+        # cv2.line(output, (x1,y1), (x2,y2), (0,0,255), 1)
+        points.append((x1,y1,x2,y2))
+    return points
 
 def hough_p(edges, output, threshold, min_line_length, max_line_gap):
 
@@ -82,9 +90,16 @@ def get_video(smoothing=5):
         canny_edges = canny(frame)
 
         f = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        f = cv2.addWeighted(f,0.7,canny_edges,0.3,0)
         f = cv2.cvtColor(f, cv2.COLOR_GRAY2RGB)
+
+        # h = hough_p(canny_edges, f, 100, 10, 30)
+        h = hough(canny_edges, f, 100)
         
-        lines_queue.append(hough_p(canny_edges, f, 150, 10, 30))
+        lines_queue.append(h)
+
+        lines_img = np.zeros(canny_edges.shape, np.uint8) 
+
 
         # while we have less than 5 sets of lines in buffer, move on
         if len(lines_queue) < smoothing:
@@ -92,17 +107,16 @@ def get_video(smoothing=5):
         else:
 
             # take last five frames
-            #lastn = lines_queue[-smoothing:]
-
-            # draw all lines
             for lines in lines_queue:
                 for x1,y1,x2,y2 in lines:
-                    cv2.line(f, (x1,y1), (x2,y2), (0,0,255), 2)
+                    cv2.line(lines_img, (x1,y1), (x2,y2), (255,255,255), 2)
 
             lines_queue.pop(0)
 
+        cleaned_lines = cv2.bitwise_and(lines_img, canny_edges)
+        cleaned_with_original = cv2.addWeighted(cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY), 0.3, cleaned_lines, 0.7, 0)
 
-        cv2.imshow('preview', f)
+        cv2.imshow('preview', cleaned_with_original)
         rval, frame = vc.read()
 
     cv2.destroyWindow('preview')
