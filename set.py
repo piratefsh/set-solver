@@ -3,6 +3,7 @@ import cv2.cv as cv
 import sys
 import numpy as np 
 import util as util
+import os
 
 COLOR_RED = (0, 0, 255)
 SIZE_CARD = (64*3, 89*3)
@@ -68,6 +69,21 @@ def get_binary(img, thresh=180):
 
     return img_threshold
 
+def get_card_color(card):
+    blue = [pix[0] for row in card for pix in row ]
+    green = [pix[1]  for row in card for pix in row ]
+    red = [pix[2] for row in card for pix in row ]
+    
+    bgr = (min(blue), min(green), min(red))
+    b, g, r = bgr 
+
+    if max(bgr) == g:
+        return 'green'
+    if r/b > 2:
+        return 'red'
+
+    return 'purple' 
+
 def test():
     # 3 cards on flat table
     cards_3 = cv2.imread('images/set-3-texture.jpg')
@@ -77,24 +93,24 @@ def test():
     assert len(transform_cards(cards_3, contours, 3)) == 3
 
     # 5 cards at an angle    
-    # cards_5_tilt = cv2.imread('images/set-5-random.jpg')
-    # res5 = detect_cards(cards_5_tilt, 5)
+    cards_5_tilt = cv2.imread('images/set-5-random.jpg')
+    res5 = detect_cards(cards_5_tilt, 5)
 
     # assert res5 is not None
     # assert len(res5) == 5 
 
-    res3 = detect_cards(cards_3, 5)
+    # res3 = detect_cards(cards_3, 3)
 
-    assert res3 is not None
-    assert len(res3) == 3
-    util.show(cards_3, 'all cards')
+    # assert res3 is not None
+    # assert len(res3) == 3
+    # util.show(cards_3, 'all cards')
 
-    for c in res3:
-        util.show(c, 'card')
+    for i in range(len(res5)):
+        c = res5[i]
+        # util.show(c, 'card')
+        cv2.imwrite('images/cards/card-%d.jpg' % i, c)
     
-    res = detect_cards(cards_3) 
-    assert len(res) == 3
-    
-    cards_5 = cv2.imread('images/set-5-random.jpg')
-    res_cards_5 = detect_cards(cards_5) 
-    assert len(res_cards_5) == 5
+
+    for link in os.listdir('images/cards'):
+        img = cv2.imread('images/cards/%s' % link)
+        print get_card_color(img)
