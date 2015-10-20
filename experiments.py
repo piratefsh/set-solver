@@ -3,6 +3,12 @@ import cv2.cv as cv
 import sys
 import numpy as np 
 
+from util import show, destroy
+
+CARD_SIZE_WIDTH = 64 
+CARD_SIZE_HEIGHT = 89
+CARD_SIZE_RATIO = CARD_SIZE_WIDTH/CARD_SIZE_HEIGHT
+
 def canny(img):
     blurred = cv2.GaussianBlur(img, ksize=(5,5), sigmaX=0)
     edges = cv2.Canny(blurred, threshold1=200, threshold2=30)
@@ -43,12 +49,6 @@ def hough_p(edges, output, threshold, min_line_length, max_line_gap):
         return lines[0]
     return []
 
-def show(img, window_name):
-    cv2.imshow(window_name, img)
-    return window_name
-
-def destroy(window_name):
-    cv2.destroyWindow(window_name)
 
 def test(t, ml, mg):
     destroy('canny')
@@ -69,6 +69,8 @@ def test(t, ml, mg):
     print 'avg is %d' % l_avg
 
     show(c, 'canny')
+
+
 
 def get_video(smoothing=5):
 
@@ -99,7 +101,6 @@ def get_video(smoothing=5):
         lines_queue.append(h)
 
         lines_img = np.zeros(canny_edges.shape, np.uint8) 
-
 
         # while we have less than 5 sets of lines in buffer, move on
         if len(lines_queue) < smoothing:
