@@ -4,6 +4,7 @@ import sys
 import numpy as np 
 import util as util
 import os
+import code
 
 COLOR_RED = (0, 0, 255)
 SIZE_CARD = (64*3, 89*3)
@@ -91,7 +92,7 @@ def get_card_color(card):
 
 def get_card_number(card):
     binary = get_binary(card, thresh=150)
-    util.show(binary)
+    #util.show(binary)
     contours = find_contours(binary)
 
     # forget about first outline of card
@@ -106,14 +107,52 @@ def get_card_number(card):
             break
         else:
             count += 1
-            
+
     return count
 
+def get_card_texture(card, square=20):
+
+    binary = get_binary(card, thresh=150)
+    contour = find_contours(binary)[1]
+
+    m = cv2.moments(contour)
+
+    cx = int(m['m10']/m['m00'])
+    cy = int(m['m01']/m['m00'])
+
+    # get bounding rectangle
+    rect = cv2.boundingRect(contour)
+    x, y, w, h = rect
+
+    #rect = cv2.minAreaRect(contour)
+    #r = cv.BoxPoints(rect)    
+
+    # print rect
+    # r = cv.BoxPoints(rect)
 
 
-    cv2.drawContours(card, contours, -1, COLOR_RED)
-    util.show(card)
-    return contours_area
+    # # get reference square
+    # ref_rect = cv2.getRectSubPix(card, (square,square), ((square+10)/2, (square+10)/2))
+    # gray_ref_rect = cv2.cvtColor(ref_rect, cv2.COLOR_RGB2GRAY)
+    
+
+    #cv2.threshold(img_blur, thresh=thresh, maxval=255, type=cv2.THRESH_BINARY)
+    #bin_rect = get_binary(gray_rect, thresh=200)
+
+    cv2.rectangle(card, (x,y), (x+w,y+h), COLOR_RED)
+
+    #r = [(int(x), int(y)) for x,y in r]
+
+    #code.interact(local=locals())
+
+    rect = cv2.getRectSubPix(card, (square,square), (x+w/2, y+h/2))
+
+    print np.std(cv2.cvtColor(rect, cv2.COLOR_RGB2GRAY))
+    # gray_rect = cv2.cvtColor(rect, cv2.COLOR_RGB2GRAY)
+
+    #cv2.rectangle(card, r[0], r[2], COLOR_RED)
+    util.show(rect)
+
 
 def test():
     # 3 cards on flat table
@@ -123,26 +162,33 @@ def test():
 
     assert len(transform_cards(cards_3, contours, 3)) == 3
 
-    # 5 cards at an angle    
-    cards_5_tilt = cv2.imread('images/set-5-random.jpg')
-    res5 = detect_cards(cards_5_tilt, 5)
+    # # 5 cards at an angle    
+    # cards_5_tilt = cv2.imread('images/set-5-random.jpg')
+    # res5 = detect_cards(cards_5_tilt, 5)
+
 
     # assert res5 is not None
     # assert len(res5) == 5 
 
-    # res3 = detect_cards(cards_3, 3)
+    res3 = detect_cards(cards_3, 3)
 
     # assert res3 is not None
     # assert len(res3) == 3
     # util.show(cards_3, 'all cards')
 
-    for i in range(len(res5)):
-        c = res5[i]
+    for i in range(5,8):
+        c = res3[i-5]
         # util.show(c, 'card')
         cv2.imwrite('images/cards/card-%d.jpg' % i, c)
+
+    # for i in range(len(res5)):
+    #     c = res5[i]
+    #     # util.show(c, 'card')
+    #     cv2.imwrite('images/cards/card-%d.jpg' % i, c)
     
 
     for link in os.listdir('images/cards'):
         img = cv2.imread('images/cards/%s' % link)
         print get_card_color(img)
         print get_card_number(img)
+        get_card_texture(img)
