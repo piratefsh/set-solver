@@ -4,11 +4,50 @@ import sys
 import numpy as np 
 import util as util
 
-def detect_cards(img):
+COLOR_RED = (0, 0, 255)
+SIZE_CARD = (400, 500)
+SIZE_CARD_W, SIZE_CARD_H = SIZE_CARD
 
-    return []
+def detect_cards(img, num_cards):
+    if img is None:
+        return None 
 
-def find_contours(bin_img, num):
+    img_binary = get_binary(img)
+    contours = find_contours(img_binary, num=num_cards)
+    
+    return transform_cards(img, contours, num_cards, draw_rects=True)
+
+def transform_cards(img, contours, num, draw_rects=False):
+    cards = []
+    for i in range(num):
+        card = contours[i]
+
+        # get bounding rectangle
+        rect = cv2.minAreaRect(card)
+        r = cv.BoxPoints(rect)
+
+        # convert to ints
+        r = [(int(x), int(y)) for x,y in r]
+
+        if draw_rects:
+            cv2.rectangle(img, r[0], r[2], COLOR_RED)
+
+        transformed = transform_card(card, img, i)
+        cards.append(transformed)
+    return cards
+
+def transform_card(card, image, i):
+    # get poly of contour
+    perimeter = cv2.arcLength(card, True)
+    approximated_poly = cv2.approxPolyDP(card, 0.02*perimeter, True)
+    approximated_poly = util.rectify(approximated_poly)
+
+    dest = np.array([[0,0], [SIZE_CARD_W,0], [SIZE_CARD_W,SIZE_CARD_H], [0,SIZE_CARD_H]], np.float32)
+    transformation = cv2.getPerspectiveTransform(approximated_poly, dest)
+    warp = cv2.warpPerspective(image, transformation, SIZE_CARD)
+    return warp 
+
+def find_contours(bin_img, num=-1):
     contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)[:num]
 
@@ -27,13 +66,24 @@ def get_binary(img, thresh=180):
     return img_threshold
 
 def test():
+    # 3 cards on flat table
     cards_3 = cv2.imread('images/set-3-texture.jpg')
-    thresh_3, window = get_binary(cards_3), 'thesholded image'
-    contours = find_contours(thresh_3, -1)
+    thresh_3 = get_binary(cards_3)
+    contours = find_contours(thresh_3, 3)
 
-    cv2.drawContours(cards_3, contours, -1, (100,100,100), thickness=2)
-    print(util)
-    util.show(cards_3, window)
+    assert len(transform_cards(cards_3, contours, 3)) == 3
+
+    # 5 cards at an angle    
+    cards_5_tilt = cv2.imread('images/set-5-random.jpg')
+    res5 = detect_cards(cards_5_tilt, 5)
+
+    assert res5 is not None
+    assert len(res5) == 5 
+
+    util.show(cards_5_tilt, 'all cards')
+
+    for c in res5:
+        util.show(c, 'card')
     
     res = detect_cards(cards_3) 
     assert len(res) == 3
