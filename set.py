@@ -89,16 +89,31 @@ def get_card_color(card):
 
     return 'purple' 
 
-def get_card_shape(card):
+def get_card_number(card):
     binary = get_binary(card, thresh=150)
     util.show(binary)
     contours = find_contours(binary)
 
-    contours_area = [cv2.contourArea(c) for c in contours]
+    # forget about first outline of card
+    contours_area = [cv2.contourArea(c) for c in contours][1:]
+
+    ratios = np.divide(contours_area, contours_area[1:] + [1])
+
+    count = 1
+
+    for r in ratios:
+        if r > 1.1:
+            break
+        else:
+            count += 1
+            
+    return count
+
+
 
     cv2.drawContours(card, contours, -1, COLOR_RED)
     util.show(card)
-    return contours
+    return contours_area
 
 def test():
     # 3 cards on flat table
@@ -130,4 +145,4 @@ def test():
     for link in os.listdir('images/cards'):
         img = cv2.imread('images/cards/%s' % link)
         print get_card_color(img)
-        print len(get_card_shape(img))
+        print get_card_number(img)
