@@ -1,6 +1,6 @@
 import set_solver as s
 import cv2, util
-from set_test import game 
+from set_test import game
 
 def test():
     # 3 cards on flat table
@@ -63,7 +63,7 @@ def main():
     assert res3bad is not None and len(res3bad) == 3
     
     # 12 cards
-    cards_12 = cv2.imread('images/set-12-random.jpg')
+    cards_12 = cv2.imread('images/set-12-random-2sets.jpg')
     
     thresh_12bad = s.get_binary(cards_12)
     res12bad = s.detect_cards(cards_12, draw_rects=False)
@@ -73,7 +73,7 @@ def main():
     cards = res12bad
     for i in range(len(cards)):
         card = cards[i]
-        test_props(card)
+        # test_props(card)
         cv2.imwrite('images/cards/card-12-%02d.jpg' % i, card)
 
     props = s.get_card_properties(res12bad, train())
@@ -81,9 +81,10 @@ def main():
 
     g = game(cards=props)
     sets = g.play(prnt=True)
-
     if sets:
-        s.pretty_print_properties(sets)
+        for st in sets:
+            s.pretty_print_properties(st)
+            print('---')
     else:
         print 'no sets :('
 

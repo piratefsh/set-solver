@@ -157,8 +157,9 @@ def get_card_color(card):
     # else, probably purple
     return PROP_COLOR_PURPLE 
 
-def get_card_shape(card, training_set):
-    binary = get_binary(card)
+def get_card_shape(card, training_set, thresh=170):
+    binary = get_binary(card, thresh=thresh)
+
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], do_rectify=False)
 

@@ -60,18 +60,18 @@ class game:
         return sum( sum(i)%3 for i in zip(x,y,z) ) == 0
 
     def compare_all(self):
+        sets = []
         self.trios = itertools.combinations( enumerate(self.cards), 3 )
         for x, y, z in self.trios:
             if self.is_set(x[1], y[1], z[1]):
-                return (x[0], y[0], z[0])
-        return None
+                cards_idx = (x[0], y[0], z[0])
+                sets.append(map(lambda x: self.cards[x], cards_idx))
+        return sets
 
     def play(self, prnt=False):
-        if self.compare_all():
-            res = [self.cards[i] for i in self.compare_all()]
-            if prnt:
-                print res
-            return res
+        results = self.compare_all()
+        if len(results) > 0:
+            return results
         return False
 
 ###############################################################################
