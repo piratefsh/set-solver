@@ -20,13 +20,14 @@ PROP_SHAPE_OBLONG = 1
 PROP_SHAPE_SQUIGGLE = 2
 PROP_SHAPE_MAP = ['DIAMOND', 'OBLONG', 'SQUIGGLE']
 
-def detect_cards(img, num_cards):
+def detect_cards(img, num_cards, draw_rects=False):
     if img is None:
         return None 
 
     img_binary = get_binary(img)
     contours = find_contours(img_binary)
-    return transform_cards(img, contours, num_cards, draw_rects=False)
+    print 'contours', len(contours)
+    return transform_cards(img, contours, num_cards, draw_rects=draw_rects)
 
 def transform_cards(img, contours, num, draw_rects=False):
     cards = []
@@ -45,7 +46,28 @@ def transform_cards(img, contours, num, draw_rects=False):
 
         transformed = transform_card(card, img)
         cards.append(transformed)
+
+    util.show(img)
     return cards
+
+def transform_card(card, image):
+    # find out if card is rotated
+    x, y, w, h = cv2.boundingRect(card) 
+    card_shape = [[0,0], [SIZE_CARD_W,0], [SIZE_CARD_W, SIZE_CARD_H], [0,SIZE_CARD_H]]
+
+    # get poly of contour
+    approximated_poly = get_approx_poly(card)
+    dest = np.array(card_shape, np.float32)
+    
+    # do transformatiom
+    transformation = cv2.getPerspectiveTransform(approximated_poly, dest)
+    warp = cv2.warpPerspective(image, transformation, SIZE_CARD)
+    
+    # rotate card back up
+    if (w > h):
+        return util.resize(np.rot90(warp), (SIZE_CARD_H, SIZE_CARD_H))
+
+    return warp 
 
 def get_approx_poly(card, rectify=True):
     perimeter = cv2.arcLength(card, True)
@@ -58,16 +80,6 @@ def get_approx_poly(card, rectify=True):
 
     return approximated_poly
 
-def transform_card(card, image):
-    # get poly of contour
-    approximated_poly = get_approx_poly(card)
-
-    dest = np.array([[0,0], [SIZE_CARD_W,0], [SIZE_CARD_W,SIZE_CARD_H], [0,SIZE_CARD_H]], np.float32)
-    
-    # do transformatiom
-    transformation = cv2.getPerspectiveTransform(approximated_poly, dest)
-    warp = cv2.warpPerspective(image, transformation, SIZE_CARD)
-    return warp 
 
 def find_contours(bin_img, num=-1, return_area=False):
     contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -78,7 +90,7 @@ def find_contours(bin_img, num=-1, return_area=False):
     
     return contours
 
-def get_binary(img, thresh=180):
+def get_binary(img, thresh=150):
     # grayscale
     img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -103,7 +115,7 @@ def get_card_color(card):
         return PROP_COLOR_GREEN
 
     # if a lot more red than blue, is probably red
-    if r/b > 2:
+    if b != 0 and r/b > 2:
         return PROP_COLOR_RED
 
     # else, probably purple
@@ -216,13 +228,16 @@ def get_card_texture(card, square=20):
 def test():
     # 3 cards on flat table
     cards_3 = cv2.imread('images/set-3-texture.jpg')
+    
+    # 5 cards at an angle    
+    cards_5_tilt = cv2.imread('images/set-5-random.jpg')
+    
+
     thresh_3 = get_binary(cards_3)
     contours = find_contours(thresh_3, 3)
 
     assert len(transform_cards(cards_3, contours, 3)) == 3
 
-    # 5 cards at an angle    
-    cards_5_tilt = cv2.imread('images/set-5-random.jpg')
     res5 = detect_cards(cards_5_tilt, 5)
     assert res5 is not None and len(res5) == 5 
 
@@ -239,20 +254,50 @@ def test():
         # util.show(c, 'card')
         cv2.imwrite('images/cards/card-3-%d.jpg' % i, c)
 
+
+    # for cards detected, get properties
+    for link in os.listdir('images/cards'):
+        img = cv2.imread('images/cards/%s' % link)
+        test_props(img)
+    print 'tests pass'
+
+def test_props(img):
     # train cards
     shape_diamond = cv2.imread('images/cards/card-5-4.jpg')
     shape_oblong = cv2.imread('images/cards/card-5-3.jpg')
     shape_squiggle = cv2.imread('images/cards/card-3-1.jpg')
     training_set = train_cards([shape_diamond, shape_oblong, shape_squiggle])
 
-    # for cards detected, get properties
-    for link in os.listdir('images/cards'):
-        img = cv2.imread('images/cards/%s' % link)
-        util.show(img)
-        print PROP_COLOR_MAP[get_card_color(img)]
-        print PROP_SHAPE_MAP[get_card_shape(img, training_set)]
-        print get_card_number(img)
-        # get_card_texture(img)
-        print('---')
+    util.show(img)
+    color = PROP_COLOR_MAP[get_card_color(img)]
+    shape = PROP_SHAPE_MAP[get_card_shape(img, training_set)]
+    num =  get_card_number(img)
 
-    print 'tests pass'
+    print '%d %s %s' % (num, color, shape)
+    # get_card_texture(img)
+    print('---')
+
+def test_bad_cards():
+    # 3 of the 12 set that's bad
+    cards_3_bad = cv2.imread('images/set-3-bad.jpg')
+    
+    # 12 cards
+    cards_12 = cv2.imread('images/set-12-random.jpg')
+    
+    thresh_12bad = get_binary(cards_12)
+    res12bad = detect_cards(cards_12, 12, False)
+    util.show(cards_12)
+    
+    # Subset of 3
+    # thresh_3bad = get_binary(cards_3_bad)
+    # util.show(thresh_3bad)
+    # res3bad = detect_cards(cards_3_bad, 3)
+    # util.show(cards_3_bad)
+    # assert res3bad is not None and len(res3bad) == 3
+
+    cards = res12bad
+    for i in range(len(cards)):
+        card = cards[i]
+        test_props(card)
+        cv2.imwrite('images/cards/card-12-%02d.jpg' % i, card)
+
