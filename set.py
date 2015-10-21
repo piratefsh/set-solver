@@ -120,14 +120,21 @@ def get_card_shape(card, training_set):
 
     return len(poly)
 
-
 def train_cards(imgs):
     training_set = {}
     # train for shapes, return contours of shapes
     for i in range(len(imgs)):
         img = imgs[i]
-        c = find_contours(get_binary(img, thresh=150))[1]
-        training_set[i] = c
+        binary = get_binary(img, thresh=180)
+        contours = find_contours(binary)
+        shape_contour = contours[1]
+        shape_img = util.draw_contour(contours, 1)
+        x,y,w,h = cv2.boundingRect(shape_contour)
+
+        cropped = shape_img[y:y+h, x:x+w]
+
+        util.show(cropped)
+        training_set[i] = cropped
 
     return training_set
 
@@ -223,8 +230,8 @@ def test():
         cv2.imwrite('images/cards/card-3-%d.jpg' % i, c)
 
     # train cards
-    shape_diamond = cv2.imread('images/cards/card-3-0.jpg')
-    shape_oblong = cv2.imread('images/cards/card-5-4.jpg')
+    shape_diamond = cv2.imread('images/cards/card-5-4.jpg')
+    shape_oblong = cv2.imread('images/cards/card-5-3.jpg')
     shape_squiggle = cv2.imread('images/cards/card-3-1.jpg')
     training_set = train_cards([shape_diamond, shape_oblong, shape_squiggle])
 
@@ -232,6 +239,6 @@ def test():
         img = cv2.imread('images/cards/%s' % link)
         print PROP_COLOR_MAP[get_card_color(img)]
         print get_card_shape(img, training_set)
-        print get_card_number(img)
-        get_card_texture(img)
+        # print get_card_number(img)
+        # get_card_texture(img)
     print 'tests pass'
