@@ -20,13 +20,30 @@ PROP_SHAPE_OBLONG = 1
 PROP_SHAPE_SQUIGGLE = 2
 PROP_SHAPE_MAP = ['DIAMOND', 'OBLONG', 'SQUIGGLE']
 
+def get_card_properties(cards, training_set):
+    properties = []
+    for img in cards:
+        num =  get_card_number(img)
+        color = PROP_COLOR_MAP[get_card_color(img)]
+        shape = PROP_SHAPE_MAP[get_card_shape(img, training_set)]
+        #todo: missing texture
+        p = (num, color, shape)
+        properties.append(p)
+    return properties
+
+def pretty_print_properties(properties):
+    for p in properties:
+        #todo: missing texture
+        num, color, shape = p 
+        print '%d %s %s' % (num, color, shape)
+
+
 def detect_cards(img, num_cards, draw_rects=False):
     if img is None:
         return None 
 
     img_binary = get_binary(img)
     contours = find_contours(img_binary)
-    print 'contours', len(contours)
     return transform_cards(img, contours, num_cards, draw_rects=draw_rects)
 
 def transform_cards(img, contours, num, draw_rects=False):
@@ -46,8 +63,6 @@ def transform_cards(img, contours, num, draw_rects=False):
 
         transformed = transform_card(card, img)
         cards.append(transformed)
-
-    util.show(img)
     return cards
 
 def transform_card(card, image):
@@ -254,50 +269,61 @@ def test():
         # util.show(c, 'card')
         cv2.imwrite('images/cards/card-3-%d.jpg' % i, c)
 
-
     # for cards detected, get properties
     for link in os.listdir('images/cards'):
         img = cv2.imread('images/cards/%s' % link)
         test_props(img)
     print 'tests pass'
 
-def test_props(img):
+def train():
     # train cards
     shape_diamond = cv2.imread('images/cards/card-5-4.jpg')
     shape_oblong = cv2.imread('images/cards/card-5-3.jpg')
     shape_squiggle = cv2.imread('images/cards/card-3-1.jpg')
     training_set = train_cards([shape_diamond, shape_oblong, shape_squiggle])
+    return training_set
 
-    util.show(img)
+def test_props(img):
     color = PROP_COLOR_MAP[get_card_color(img)]
-    shape = PROP_SHAPE_MAP[get_card_shape(img, training_set)]
+    shape = PROP_SHAPE_MAP[get_card_shape(img, train())]
     num =  get_card_number(img)
 
     print '%d %s %s' % (num, color, shape)
+    util.show(img)
     # get_card_texture(img)
     print('---')
 
 def test_bad_cards():
     # 3 of the 12 set that's bad
     cards_3_bad = cv2.imread('images/set-3-bad.jpg')
+    thresh_3bad = get_binary(cards_3_bad)
+    res3bad = detect_cards(cards_3_bad, 3)
+    assert res3bad is not None and len(res3bad) == 3
     
     # 12 cards
     cards_12 = cv2.imread('images/set-12-random.jpg')
     
-    thresh_12bad = get_binary(cards_12)
+    thresh_12bad = get_binary(cards_12, thresh=90)
     res12bad = detect_cards(cards_12, 12, False)
-    util.show(cards_12)
+    # util.show(cards_12)
     
-    # Subset of 3
-    # thresh_3bad = get_binary(cards_3_bad)
-    # util.show(thresh_3bad)
-    # res3bad = detect_cards(cards_3_bad, 3)
-    # util.show(cards_3_bad)
-    # assert res3bad is not None and len(res3bad) == 3
-
+    # Subset of 3, with the 1 problem card
     cards = res12bad
     for i in range(len(cards)):
         card = cards[i]
-        test_props(card)
+        # test_props(card)
         cv2.imwrite('images/cards/card-12-%02d.jpg' % i, card)
+
+    props = get_card_properties(res12bad, train())
+    expected = [(3, 'RED', 'OBLONG'),(2, 'PURPLE', 'SQUIGGLE'),(1, 'GREEN', 'SQUIGGLE'),\
+        (2, 'PURPLE', 'DIAMOND'), (2, 'GREEN', 'SQUIGGLE'), (1, 'GREEN', 'SQUIGGLE'), (2, 'RED', 'SQUIGGLE'), \
+        (1, 'RED', 'DIAMOND'), (2, 'PURPLE', 'DIAMOND'), (1, 'RED', 'DIAMOND'), \
+        (1, 'PURPLE', 'SQUIGGLE'), (1, 'GREEN', 'DIAMOND')]
+    
+    assert props == expected
+
+    pretty_print_properties(props)
+
+    print 'tests pass'
+
 
