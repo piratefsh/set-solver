@@ -202,6 +202,8 @@ def train_cards(imgs):
 def get_dropoff(array, maxratio=1.1):
     """Given array of values, return the index of the element where the ratio of each elem to the next drops off (assuming sorted input)"""
 
+    # add small differential to avoid dividing by zero
+    array += 0.000000001
     ratios = np.divide(array, array[1:] + [1])
 
     count = 1
@@ -215,6 +217,7 @@ def get_dropoff(array, maxratio=1.1):
     return count
 
 def get_card_number(card):
+
     binary = get_binary(card, thresh=150)
     #util.show(binary)
     contours = find_contours(binary)
