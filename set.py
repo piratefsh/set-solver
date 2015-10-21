@@ -4,6 +4,7 @@ import sys
 import numpy as np 
 import util as util
 import os
+import code
 
 COLOR_RED = (0, 0, 255)
 SIZE_CARD = (64*3, 89*3)
@@ -108,16 +109,17 @@ def get_card_color(card):
     # else, probably purple
     return PROP_COLOR_PURPLE 
 
-def get_card_shape(card):
+def get_card_shape(card, training_set):
     binary = get_binary(card, thresh=150)
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], rectify=False)
 
     # draw poly
-    cv2.fillPoly(card, [poly], COLOR_RED)
-    util.show(card)
+    # cv2.fillPoly(card, [poly], COLOR_RED)
+    # util.show(card)
 
     return len(poly)
+
 
 def train_cards(imgs):
     training_set = {}
@@ -128,6 +130,71 @@ def train_cards(imgs):
         training_set[i] = c
 
     return training_set
+
+def get_card_number(card):
+    binary = get_binary(card, thresh=150)
+    #util.show(binary)
+    contours = find_contours(binary)
+    poly = get_approx_poly(contours[1], rectify=False)
+
+    # forget about first outline of card
+    contours_area = [cv2.contourArea(c) for c in contours][1:]
+
+    ratios = np.divide(contours_area, contours_area[1:] + [1])
+
+    count = 1
+
+    for r in ratios:
+        if r > 1.1:
+            break
+        else:
+            count += 1
+
+    return count
+
+def get_card_texture(card, square=20):
+
+    binary = get_binary(card, thresh=150)
+    contour = find_contours(binary)[1]
+
+    m = cv2.moments(contour)
+
+    cx = int(m['m10']/m['m00'])
+    cy = int(m['m01']/m['m00'])
+
+    # get bounding rectangle
+    rect = cv2.boundingRect(contour)
+    x, y, w, h = rect
+
+    #rect = cv2.minAreaRect(contour)
+    #r = cv.BoxPoints(rect)    
+
+    # print rect
+    # r = cv.BoxPoints(rect)
+
+
+    # # get reference square
+    # ref_rect = cv2.getRectSubPix(card, (square,square), ((square+10)/2, (square+10)/2))
+    # gray_ref_rect = cv2.cvtColor(ref_rect, cv2.COLOR_RGB2GRAY)
+    
+
+    #cv2.threshold(img_blur, thresh=thresh, maxval=255, type=cv2.THRESH_BINARY)
+    #bin_rect = get_binary(gray_rect, thresh=200)
+
+    cv2.rectangle(card, (x,y), (x+w,y+h), COLOR_RED)
+
+    #r = [(int(x), int(y)) for x,y in r]
+
+    #code.interact(local=locals())
+
+    rect = cv2.getRectSubPix(card, (square,square), (x+w/2, y+h/2))
+
+    print np.std(cv2.cvtColor(rect, cv2.COLOR_RGB2GRAY))
+    # gray_rect = cv2.cvtColor(rect, cv2.COLOR_RGB2GRAY)
+
+    #cv2.rectangle(card, r[0], r[2], COLOR_RED)
+    util.show(rect)
+
 
 def test():
     # 3 cards on flat table
@@ -149,11 +216,12 @@ def test():
         c = res5[i]
         # util.show(c, 'card')
         cv2.imwrite('images/cards/card-5-%d.jpg' % i, c)
+
     for i in range(len(res3)):
         c = res3[i]
         # util.show(c, 'card')
         cv2.imwrite('images/cards/card-3-%d.jpg' % i, c)
-    
+
     # train cards
     shape_diamond = cv2.imread('images/cards/card-3-0.jpg')
     shape_oblong = cv2.imread('images/cards/card-5-4.jpg')
@@ -164,5 +232,6 @@ def test():
         img = cv2.imread('images/cards/%s' % link)
         print PROP_COLOR_MAP[get_card_color(img)]
         print get_card_shape(img, training_set)
-
+        print get_card_number(img)
+        get_card_texture(img)
     print 'tests pass'
