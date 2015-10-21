@@ -119,14 +119,16 @@ def get_card_shape(card, training_set):
     this_shape = get_shape_image(card)
     for i, that_shape in training_set.items():
 
+        # resize image
         this_shape_res = util.resize(this_shape, that_shape.shape)
 
-        # find diff and it's sum
+        # find diff and its sum
         d = cv2.absdiff(this_shape_res, that_shape)
         sum_diff = np.sum(d)
 
         diffs.append(sum_diff)
 
+    # return index of shape that has minimum difference
     return diffs.index(min(diffs))
 
 def get_shape_image(img):
@@ -149,7 +151,6 @@ def train_cards(imgs):
 
 def get_card_number(card):
     binary = get_binary(card, thresh=150)
-    #util.show(binary)
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], rectify=False)
 
@@ -244,6 +245,7 @@ def test():
     shape_squiggle = cv2.imread('images/cards/card-3-1.jpg')
     training_set = train_cards([shape_diamond, shape_oblong, shape_squiggle])
 
+    # for cards detected, get properties
     for link in os.listdir('images/cards'):
         img = cv2.imread('images/cards/%s' % link)
         util.show(img)
@@ -252,4 +254,5 @@ def test():
         print get_card_number(img)
         # get_card_texture(img)
         print('---')
+
     print 'tests pass'
