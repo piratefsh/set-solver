@@ -57,3 +57,7 @@ docs/_build/
 
 # PyBuilder
 target/
+
+.venv
+images/cards
+.DS_Store
