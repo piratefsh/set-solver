@@ -114,28 +114,37 @@ def get_card_shape(card, training_set):
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], rectify=False)
 
-    # draw poly
-    # cv2.fillPoly(card, [poly], COLOR_RED)
-    # util.show(card)
+    # for each card in trainings set, find one with most similarity 
+    diffs = []
+    this_shape = get_shape_image(card)
+    for i, that_shape in training_set.items():
 
-    return len(poly)
+        this_shape_res = util.resize(this_shape, that_shape.shape)
+
+        # find diff and it's sum
+        d = cv2.absdiff(this_shape_res, that_shape)
+        sum_diff = np.sum(d)
+
+        diffs.append(sum_diff)
+
+    return diffs.index(min(diffs))
+
+def get_shape_image(img):
+    binary = get_binary(img, thresh=180)
+    contours = find_contours(binary)
+    shape_contour = contours[1]
+    shape_img = util.draw_contour(contours, 1)
+    x,y,w,h = cv2.boundingRect(shape_contour)
+    cropped = shape_img[y:y+h, x:x+w]
+    return cropped
 
 def train_cards(imgs):
     training_set = {}
     # train for shapes, return contours of shapes
     for i in range(len(imgs)):
         img = imgs[i]
-        binary = get_binary(img, thresh=180)
-        contours = find_contours(binary)
-        shape_contour = contours[1]
-        shape_img = util.draw_contour(contours, 1)
-        x,y,w,h = cv2.boundingRect(shape_contour)
-
-        cropped = shape_img[y:y+h, x:x+w]
-
-        util.show(cropped)
-        training_set[i] = cropped
-
+        shape = get_shape_only(img)
+        training_set[i] = shape
     return training_set
 
 def get_card_number(card):
@@ -237,8 +246,10 @@ def test():
 
     for link in os.listdir('images/cards'):
         img = cv2.imread('images/cards/%s' % link)
+        util.show(img)
         print PROP_COLOR_MAP[get_card_color(img)]
-        print get_card_shape(img, training_set)
-        # print get_card_number(img)
+        print PROP_SHAPE_MAP[get_card_shape(img, training_set)]
+        print get_card_number(img)
         # get_card_texture(img)
+        print('---')
     print 'tests pass'
