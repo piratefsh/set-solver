@@ -9,6 +9,16 @@ COLOR_RED = (0, 0, 255)
 SIZE_CARD = (64*3, 89*3)
 SIZE_CARD_W, SIZE_CARD_H = SIZE_CARD
 
+PROP_COLOR_RED = 0 
+PROP_COLOR_GREEN = 1
+PROP_COLOR_PURPLE = 2
+PROP_COLOR_MAP = ['RED', 'GREEN', 'PURPLE']
+
+PROP_SHAPE_DIAMOND = 0
+PROP_SHAPE_OBLONG = 1
+PROP_SHAPE_SQUIGGLE = 2
+PROP_SHAPE_MAP = ['DIAMOND', 'OBLONG', 'SQUIGGLE']
+
 def detect_cards(img, num_cards):
     if img is None:
         return None 
@@ -36,13 +46,20 @@ def transform_cards(img, contours, num, draw_rects=False):
         cards.append(transformed)
     return cards
 
-def transform_card(card, image):
-    # get poly of contour
+def get_approx_poly(card, rectify=True):
     perimeter = cv2.arcLength(card, True)
-    approximated_poly_raw = cv2.approxPolyDP(card, 0.02*perimeter, True)
+    
+    approximated_poly = cv2.approxPolyDP(card, 0.02*perimeter, True)
 
     # get rectified points in clockwise order
-    approximated_poly = util.rectify(approximated_poly_raw)
+    if rectify: 
+        approximated_poly = util.rectify(approximated_poly)
+
+    return approximated_poly
+
+def transform_card(card, image):
+    # get poly of contour
+    approximated_poly = get_approx_poly(card)
 
     dest = np.array([[0,0], [SIZE_CARD_W,0], [SIZE_CARD_W,SIZE_CARD_H], [0,SIZE_CARD_H]], np.float32)
     
@@ -55,11 +72,9 @@ def find_contours(bin_img, num=-1, return_area=False):
     contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
-    # if return_area:
-    #     return [(x, cv2.contourArea(x)) for x in contours]
-
-    # else:
-    if num > 0: return contours[:num]
+    if num > 0: 
+        return contours[:num]
+    
     return contours
 
 def get_binary(img, thresh=180):
@@ -82,19 +97,37 @@ def get_card_color(card):
     bgr = (min(blue), min(green), min(red))
     b, g, r = bgr 
 
+    # if mostly green
     if max(bgr) == g:
-        return 'green'
-    if r/b > 2:
-        return 'red'
+        return PROP_COLOR_GREEN
 
-    return 'purple' 
+    # if a lot more red than blue, is probably red
+    if r/b > 2:
+        return PROP_COLOR_RED
+
+    # else, probably purple
+    return PROP_COLOR_PURPLE 
 
 def get_card_shape(card):
     binary = get_binary(card, thresh=150)
     contours = find_contours(binary)
+    poly = get_approx_poly(contours[1], rectify=False)
 
-    contours_area = [cv2.contourArea(c) for c in contours]
-    return contours
+    # draw poly
+    cv2.fillPoly(card, [poly], COLOR_RED)
+    util.show(card)
+
+    return len(poly)
+
+def train_cards(imgs):
+    training_set = {}
+    # train for shapes, return contours of shapes
+    for i in range(len(imgs)):
+        img = imgs[i]
+        c = find_contours(get_binary(img, thresh=150))[1]
+        training_set[i] = c
+
+    return training_set
 
 def test():
     # 3 cards on flat table
@@ -114,11 +147,22 @@ def test():
 
     for i in range(len(res5)):
         c = res5[i]
-        util.show(c, 'card')
-        cv2.imwrite('images/cards/card-%d.jpg' % i, c)
+        # util.show(c, 'card')
+        cv2.imwrite('images/cards/card-5-%d.jpg' % i, c)
+    for i in range(len(res3)):
+        c = res3[i]
+        # util.show(c, 'card')
+        cv2.imwrite('images/cards/card-3-%d.jpg' % i, c)
     
+    # train cards
+    shape_diamond = cv2.imread('images/cards/card-3-0.jpg')
+    shape_oblong = cv2.imread('images/cards/card-5-4.jpg')
+    shape_squiggle = cv2.imread('images/cards/card-3-1.jpg')
+    training_set = train_cards([shape_diamond, shape_oblong, shape_squiggle])
 
     for link in os.listdir('images/cards'):
         img = cv2.imread('images/cards/%s' % link)
-        print get_card_color(img)
-        print len(get_card_shape(img))
+        print PROP_COLOR_MAP[get_card_color(img)]
+        print get_card_shape(img, training_set)
+
+    print 'tests pass'
