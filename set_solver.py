@@ -202,7 +202,7 @@ def get_dropoff(array, maxratio=1.1):
     """Given array of values, return the index of the element where the ratio of each elem to the next drops off (assuming sorted input)"""
 
     # add small differential to avoid dividing by zero
-    array = [ e + 0.000000001 for e in array ]
+    array = [e for e in array if e > 0]
 
     ratios = np.divide(array, array[1:] + [1])
 
@@ -217,15 +217,14 @@ def get_dropoff(array, maxratio=1.1):
     return count
 
 def get_card_number(card):
-    binary = get_binary(card)
+    binary = get_binary(card, thresh=180)
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], do_rectify=False)
 
     # forget about first outline of card
     contours_area = [cv2.contourArea(c) for c in contours][1:]
-    print contours_area
 
-    return get_dropoff(contours_area, maxratio=1.2)
+    return get_dropoff(contours_area, maxratio=1.1)
 
 def get_card_texture(card, square=20):
 
