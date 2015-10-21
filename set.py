@@ -91,13 +91,9 @@ def get_card_color(card):
 
 def get_card_shape(card):
     binary = get_binary(card, thresh=150)
-    util.show(binary)
     contours = find_contours(binary)
 
     contours_area = [cv2.contourArea(c) for c in contours]
-
-    cv2.drawContours(card, contours, -1, COLOR_RED)
-    util.show(card)
     return contours
 
 def test():
@@ -111,19 +107,14 @@ def test():
     # 5 cards at an angle    
     cards_5_tilt = cv2.imread('images/set-5-random.jpg')
     res5 = detect_cards(cards_5_tilt, 5)
+    assert res5 is not None and len(res5) == 5 
 
-    # assert res5 is not None
-    # assert len(res5) == 5 
-
-    # res3 = detect_cards(cards_3, 3)
-
-    # assert res3 is not None
-    # assert len(res3) == 3
-    # util.show(cards_3, 'all cards')
+    res3 = detect_cards(cards_3, 3)
+    assert res3 is not None and len(res3) == 3
 
     for i in range(len(res5)):
         c = res5[i]
-        # util.show(c, 'card')
+        util.show(c, 'card')
         cv2.imwrite('images/cards/card-%d.jpg' % i, c)
     
 
