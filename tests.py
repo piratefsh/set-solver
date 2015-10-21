@@ -39,9 +39,9 @@ def test():
 
 def train():
     # train cards
-    shape_diamond = cv2.imread('images/cards/card-5-4.jpg')
-    shape_oblong = cv2.imread('images/cards/card-5-3.jpg')
-    shape_squiggle = cv2.imread('images/cards/card-3-1.jpg')
+    shape_diamond = cv2.imread('images/training/diamond.jpg')
+    shape_oblong = cv2.imread('images/training/oblong.jpg')
+    shape_squiggle = cv2.imread('images/training/squiggle.jpg')
     training_set = s.train_cards([shape_diamond, shape_oblong, shape_squiggle])
     return training_set
 
@@ -63,9 +63,9 @@ def main():
     assert res3bad is not None and len(res3bad) == 3
     
     # 12 cards
-    cards_12 = cv2.imread('images/set-12-random-multi.jpg')
+    cards_12 = cv2.imread('images/set-12-random.jpg')
     
-    thresh_12bad = s.get_binary(cards_12, thresh=90)
+    thresh_12bad = s.get_binary(cards_12)
     res12bad = s.detect_cards(cards_12, draw_rects=False)
     util.show(cards_12)
     

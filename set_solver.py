@@ -146,7 +146,6 @@ def get_card_color(card):
 
     bgr = (min(blue), min(green), min(red))
     b, g, r = bgr 
-
     # if mostly green
     if max(bgr) == g:
         return PROP_COLOR_GREEN
