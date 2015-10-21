@@ -42,8 +42,11 @@ import itertools
 
 
 class game:
-    def __init__(self):
-        self.cards = [self.random_card() for _ in xrange(12)]
+    def __init__(self, cards=None):
+        if cards is None:
+            self.cards = [self.random_card() for _ in xrange(12)]
+        else:
+            self.cards = cards
 
     def __repr__(self):
         return '\n'.join(str(card) for card in self.cards)
@@ -65,9 +68,10 @@ class game:
 
     def play(self, prnt=False):
         if self.compare_all():
+            res = [self.cards[i] for i in self.compare_all()]
             if prnt:
-                print [self.cards[i] for i in self.compare_all()]
-            return True
+                print res
+            return res
         return False
 
 ###############################################################################

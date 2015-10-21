@@ -10,20 +10,20 @@ COLOR_RED = (0, 0, 255)
 SIZE_CARD = (64*3, 89*3)
 SIZE_CARD_W, SIZE_CARD_H = SIZE_CARD
 
-PROP_COLOR_RED = 0 
-PROP_COLOR_GREEN = 1
-PROP_COLOR_PURPLE = 2
-PROP_COLOR_MAP = ['RED', 'GREEN', 'PURPLE']
+PROP_COLOR_RED = 1
+PROP_COLOR_GREEN = 2
+PROP_COLOR_PURPLE = 3
+PROP_COLOR_MAP = ['_', 'RED', 'GREEN', 'PURPLE']
 
-PROP_SHAPE_DIAMOND = 0
-PROP_SHAPE_OBLONG = 1
-PROP_SHAPE_SQUIGGLE = 2
-PROP_SHAPE_MAP = ['DIAMOND', 'OBLONG', 'SQUIGGLE']
+PROP_SHAPE_DIAMOND = 1
+PROP_SHAPE_OBLONG = 2
+PROP_SHAPE_SQUIGGLE = 3
+PROP_SHAPE_MAP = ['_', 'DIAMOND', 'OBLONG', 'SQUIGGLE']
 
-PROP_TEXTURE_STRIPED = 0
-PROP_TEXTURE_EMPTY = 1
-PROP_TEXTURE_SOLID = 2
-PROP_TEXTURE_MAP = ['STRIPED', 'EMPTY', 'SOLID']
+PROP_TEXTURE_STRIPED = 1
+PROP_TEXTURE_EMPTY = 2
+PROP_TEXTURE_SOLID = 3
+PROP_TEXTURE_MAP = ['_', 'STRIPED', 'EMPTY', 'SOLID']
 
 def get_card_properties(cards, training_set):
     properties = []
@@ -178,7 +178,7 @@ def get_card_shape(card, training_set):
         diffs.append(sum_diff)
 
     # return index of shape that has minimum difference
-    return diffs.index(min(diffs))
+    return diffs.index(min(diffs)) + 1
 
 def get_shape_image(img):
     binary = get_binary(img, thresh=180)
@@ -248,5 +248,4 @@ def get_card_texture(card, square=20):
 
     else:
         return PROP_TEXTURE_SOLID
-
 

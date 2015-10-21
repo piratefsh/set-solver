@@ -1,4 +1,5 @@
 from set_solver import * 
+from set_test import game 
 
 def test():
     # 3 cards on flat table
@@ -53,7 +54,7 @@ def test_props(img):
     util.show(img)
     print('---')
 
-def test_bad_cards():
+def test_main():
     # 3 of the 12 set that's bad
     cards_3_bad = cv2.imread('images/set-3-bad.jpg')
     thresh_3bad = get_binary(cards_3_bad)
@@ -71,12 +72,22 @@ def test_bad_cards():
     cards = res12bad
     for i in range(len(cards)):
         card = cards[i]
-        test_props(card)
+        # test_props(card)
         cv2.imwrite('images/cards/card-12-%02d.jpg' % i, card)
 
     props = get_card_properties(res12bad, train())
+    pretty_print_properties(props)
+
+    g = game(cards=props)
+    sets = g.play(prnt=True)
+    if sets:
+        pretty_print_properties(sets)
+    else:
+        print 'no sets :('
+
+
+
     # assert props == expected
 
-    pretty_print_properties(props)
 
     print 'tests pass'
