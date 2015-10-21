@@ -20,6 +20,11 @@ PROP_SHAPE_OBLONG = 1
 PROP_SHAPE_SQUIGGLE = 2
 PROP_SHAPE_MAP = ['DIAMOND', 'OBLONG', 'SQUIGGLE']
 
+PROP_TEXTURE_STRIPED = 0
+PROP_TEXTURE_EMPTY = 1
+PROP_TEXTURE_SOLID = 2
+PROP_TEXTURE_MAP = ['STRIPED', 'EMPTY', 'SOLID']
+
 def get_card_properties(cards, training_set):
     properties = []
     for img in cards:
@@ -38,17 +43,20 @@ def pretty_print_properties(properties):
         print '%d %s %s' % (num, color, shape)
 
 
-def detect_cards(img, num_cards, draw_rects=False):
+
+def detect_cards(img, draw_rects = False):
     if img is None:
         return None 
 
     img_binary = get_binary(img)
     contours = find_contours(img_binary)
+    num_cards = get_dropoff([cv2.contourArea(c) for c in contours], maxratio=1.5)
+
     return transform_cards(img, contours, num_cards, draw_rects=draw_rects)
 
 def transform_cards(img, contours, num, draw_rects=False):
     cards = []
-    for i in range(num):
+    for i in xrange(num):
         card = contours[i]
 
         # get bounding rectangle
@@ -61,8 +69,13 @@ def transform_cards(img, contours, num, draw_rects=False):
         if draw_rects:
             cv2.rectangle(img, r[0], r[2], COLOR_RED)
 
-        transformed = transform_card(card, img)
-        cards.append(transformed)
+        try:
+            transformed = transform_card(card, img)
+            cards.append(transformed)
+        except:
+            print 'Error processing card!! :o'
+            pass
+
     return cards
 
 def transform_card(card, image):
@@ -84,15 +97,25 @@ def transform_card(card, image):
 
     return warp 
 
-def get_approx_poly(card, rectify=True):
+def get_approx_poly(card, do_rectify=True, image=None):
     perimeter = cv2.arcLength(card, True)
-    
-    approximated_poly = cv2.approxPolyDP(card, 0.02*perimeter, True)
 
-    # get rectified points in clockwise order
-    if rectify: 
-        approximated_poly = util.rectify(approximated_poly)
+    approximated_poly = cv2.approxPolyDP(card, 0.1*perimeter, True)
 
+    # TODO: deal with case where approximated_poly does not have 4 points (3 or 5)
+    #kl = len(approximated_poly)
+    #kif l != 4:
+        #kfor p in approximated_poly:
+            #kcv2.circle(image, (p[0][0], p[0][1]), 3, (255,0,0), 5)
+        #kutil.show(image)
+    #k# get rectified points in clockwise order
+
+    if do_rectify:
+        reapproximated_poly = util.rectify(approximated_poly)
+        if reapproximated_poly.all():
+            approximated_poly = reapproximated_poly
+        else:
+            print 'Not rectified!'
     return approximated_poly
 
 
@@ -100,9 +123,9 @@ def find_contours(bin_img, num=-1, return_area=False):
     contours, hierarchy = cv2.findContours(bin_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
 
-    if num > 0: 
+    if num > 0:
         return contours[:num]
-    
+
     return contours
 
 def get_binary(img, thresh=150):
@@ -113,7 +136,7 @@ def get_binary(img, thresh=150):
     img_blur = cv2.GaussianBlur(img_gray, ksize=(3,3), sigmaX=0)
 
     # threshold
-    flag, img_threshold = cv2.threshold(img_blur, thresh=thresh, maxval=255, type=cv2.THRESH_BINARY)  
+    flag, img_threshold = cv2.threshold(img_blur, thresh=thresh, maxval=255, type=cv2.THRESH_BINARY)
 
     return img_threshold
 
@@ -139,7 +162,7 @@ def get_card_color(card):
 def get_card_shape(card, training_set):
     binary = get_binary(card, thresh=150)
     contours = find_contours(binary)
-    poly = get_approx_poly(contours[1], rectify=False)
+    poly = get_approx_poly(contours[1], do_rectify=False)
 
     # for each card in trainings set, find one with most similarity 
     diffs = []
@@ -176,72 +199,59 @@ def train_cards(imgs):
         training_set[i] = shape
     return training_set
 
-def get_card_number(card):
-    binary = get_binary(card, thresh=150)
-    contours = find_contours(binary)
-    poly = get_approx_poly(contours[1], rectify=False)
+def get_dropoff(array, maxratio=1.1):
+    """Given array of values, return the index of the element where the ratio of each elem to the next drops off (assuming sorted input)"""
 
-    # forget about first outline of card
-    contours_area = [cv2.contourArea(c) for c in contours][1:]
-
-    ratios = np.divide(contours_area, contours_area[1:] + [1])
+    ratios = np.divide(array, array[1:] + [1])
 
     count = 1
 
     for r in ratios:
-        if r > 1.1:
+        if r > maxratio:
             break
         else:
             count += 1
 
     return count
 
+def get_card_number(card):
+    binary = get_binary(card, thresh=150)
+    #util.show(binary)
+    contours = find_contours(binary)
+    poly = get_approx_poly(contours[1], do_rectify=False)
+
+    # forget about first outline of card
+    contours_area = [cv2.contourArea(c) for c in contours][1:]
+
+    return get_dropoff(contours_area, maxratio=1.1)
+
 def get_card_texture(card, square=20):
 
     binary = get_binary(card, thresh=150)
     contour = find_contours(binary)[1]
 
-    m = cv2.moments(contour)
-
-    cx = int(m['m10']/m['m00'])
-    cy = int(m['m01']/m['m00'])
-
     # get bounding rectangle
     rect = cv2.boundingRect(contour)
     x, y, w, h = rect
 
-    #rect = cv2.minAreaRect(contour)
-    #r = cv.BoxPoints(rect)    
-
-    # print rect
-    # r = cv.BoxPoints(rect)
-
-
-    # # get reference square
-    # ref_rect = cv2.getRectSubPix(card, (square,square), ((square+10)/2, (square+10)/2))
-    # gray_ref_rect = cv2.cvtColor(ref_rect, cv2.COLOR_RGB2GRAY)
-    
-
-    #cv2.threshold(img_blur, thresh=thresh, maxval=255, type=cv2.THRESH_BINARY)
-    #bin_rect = get_binary(gray_rect, thresh=200)
-
-    cv2.rectangle(card, (x,y), (x+w,y+h), COLOR_RED)
-
-    #r = [(int(x), int(y)) for x,y in r]
-
-    #code.interact(local=locals())
-
     rect = cv2.getRectSubPix(card, (square,square), (x+w/2, y+h/2))
 
-    print np.std(cv2.cvtColor(rect, cv2.COLOR_RGB2GRAY))
-    # gray_rect = cv2.cvtColor(rect, cv2.COLOR_RGB2GRAY)
+    gray_rect = cv2.cvtColor(rect, cv2.COLOR_RGB2GRAY)
+    pixel_std = np.std(gray_rect)
 
-    #cv2.rectangle(card, r[0], r[2], COLOR_RED)
-    util.show(rect)
+    if pixel_std > 4.5:
+        return 'Striped'
+
+    elif np.mean(gray_rect) > 150:
+        return 'Empty'
+
+    else:
+        return 'Solid'
+
 
 
 def test():
-    # 3 cards on flat table
+#    # 3 cards on flat table
     cards_3 = cv2.imread('images/set-3-texture.jpg')
     
     # 5 cards at an angle    
@@ -262,7 +272,7 @@ def test():
     for i in range(len(res5)):
         c = res5[i]
         # util.show(c, 'card')
-        cv2.imwrite('images/cards/card-5-%d.jpg' % i, c)
+        cv2.imwrite('images/cards/card-12-%d.jpg' % i, c)
 
     for i in range(len(res3)):
         c = res3[i]
@@ -297,14 +307,14 @@ def test_bad_cards():
     # 3 of the 12 set that's bad
     cards_3_bad = cv2.imread('images/set-3-bad.jpg')
     thresh_3bad = get_binary(cards_3_bad)
-    res3bad = detect_cards(cards_3_bad, 3)
+    res3bad = detect_cards(cards_3_bad)
     assert res3bad is not None and len(res3bad) == 3
     
     # 12 cards
     cards_12 = cv2.imread('images/set-12-random.jpg')
     
     thresh_12bad = get_binary(cards_12, thresh=90)
-    res12bad = detect_cards(cards_12, 12, False)
+    res12bad = detect_cards(cards_12)
     # util.show(cards_12)
     
     # Subset of 3, with the 1 problem card
@@ -325,5 +335,3 @@ def test_bad_cards():
     pretty_print_properties(props)
 
     print 'tests pass'
-
-
