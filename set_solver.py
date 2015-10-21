@@ -73,7 +73,7 @@ def transform_cards(img, contours, num, draw_rects=False):
             cards.append(transformed)
         except:
             print 'Error processing card!! :o'
-            pass
+            continue
 
     return cards
 
@@ -92,7 +92,7 @@ def transform_card(card, image):
     
     # rotate card back up
     if (w > h):
-        return util.resize(np.rot90(warp), (SIZE_CARD_H, SIZE_CARD_H))
+        return util.resize(np.rot90(warp), (SIZE_CARD_H, SIZE_CARD_W))
 
     return warp 
 
@@ -159,7 +159,7 @@ def get_card_color(card):
     return PROP_COLOR_PURPLE 
 
 def get_card_shape(card, training_set):
-    binary = get_binary(card, thresh=150)
+    binary = get_binary(card)
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], do_rectify=False)
 
@@ -181,7 +181,7 @@ def get_card_shape(card, training_set):
     return diffs.index(min(diffs)) + 1
 
 def get_shape_image(img):
-    binary = get_binary(img, thresh=180)
+    binary = get_binary(img)
     contours = find_contours(binary)
     shape_contour = contours[1]
     shape_img = util.draw_contour(contours, 1)
@@ -217,14 +217,15 @@ def get_dropoff(array, maxratio=1.1):
     return count
 
 def get_card_number(card):
-    binary = get_binary(card, thresh=150)
+    binary = get_binary(card)
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], do_rectify=False)
 
     # forget about first outline of card
     contours_area = [cv2.contourArea(c) for c in contours][1:]
+    print contours_area
 
-    return get_dropoff(contours_area, maxratio=1.1)
+    return get_dropoff(contours_area, maxratio=1.2)
 
 def get_card_texture(card, square=20):
 
