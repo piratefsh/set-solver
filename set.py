@@ -203,7 +203,8 @@ def get_dropoff(array, maxratio=1.1):
     """Given array of values, return the index of the element where the ratio of each elem to the next drops off (assuming sorted input)"""
 
     # add small differential to avoid dividing by zero
-    array += 0.000000001
+    array = [ e + 0.000000001 for e in array]
+    
     ratios = np.divide(array, array[1:] + [1])
 
     count = 1
@@ -315,7 +316,7 @@ def test_bad_cards():
     assert res3bad is not None and len(res3bad) == 3
     
     # 12 cards
-    cards_12 = cv2.imread('images/set-12-random.jpg')
+    cards_12 = cv2.imread('images/set-12-random-90deg.jpg')
     
     thresh_12bad = get_binary(cards_12, thresh=90)
     res12bad = detect_cards(cards_12)
