@@ -43,7 +43,6 @@ def pretty_print_properties(properties):
          PROP_SHAPE_MAP[shape], PROP_TEXTURE_MAP[texture])
 
 
-
 def detect_cards(img, draw_rects = False):
     if img is None:
         return None 
@@ -203,8 +202,8 @@ def get_dropoff(array, maxratio=1.1):
     """Given array of values, return the index of the element where the ratio of each elem to the next drops off (assuming sorted input)"""
 
     # add small differential to avoid dividing by zero
-    array = [ e + 0.000000001 for e in array]
-    
+    array = [ e + 0.000000001 for e in array ]
+
     ratios = np.divide(array, array[1:] + [1])
 
     count = 1
@@ -218,9 +217,7 @@ def get_dropoff(array, maxratio=1.1):
     return count
 
 def get_card_number(card):
-
     binary = get_binary(card, thresh=150)
-    #util.show(binary)
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], do_rectify=False)
 
@@ -255,7 +252,7 @@ def get_card_texture(card, square=20):
 
 
 def test():
-#    # 3 cards on flat table
+    # 3 cards on flat table
     cards_3 = cv2.imread('images/set-3-texture.jpg')
     
     # 5 cards at an angle    
@@ -305,7 +302,6 @@ def test_props(img):
 
     print '%d %s %s %s' % (num, color, shape, texture)
     util.show(img)
-    # get_card_texture(img)
     print('---')
 
 def test_bad_cards():
@@ -330,11 +326,6 @@ def test_bad_cards():
         cv2.imwrite('images/cards/card-12-%02d.jpg' % i, card)
 
     props = get_card_properties(res12bad, train())
-    expected = [(3, 'RED', 'OBLONG'),(2, 'PURPLE', 'SQUIGGLE'),(1, 'GREEN', 'SQUIGGLE'),\
-        (2, 'PURPLE', 'DIAMOND'), (2, 'GREEN', 'SQUIGGLE'), (1, 'GREEN', 'SQUIGGLE'), (2, 'RED', 'SQUIGGLE'), \
-        (1, 'RED', 'DIAMOND'), (2, 'PURPLE', 'DIAMOND'), (1, 'RED', 'DIAMOND'), \
-        (1, 'PURPLE', 'SQUIGGLE'), (1, 'GREEN', 'DIAMOND')]
-    
     # assert props == expected
 
     pretty_print_properties(props)
