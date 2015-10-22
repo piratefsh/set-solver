@@ -6,8 +6,8 @@ import numpy as np
 # solve for every frame
 
 WINDOW_NAME = 'video'
-PREV_FRAME_STACK_SIZE = 3
-MOVEMENT_THRESHOLD = 5
+PREV_FRAME_STACK_SIZE = 4
+MOVEMENT_THRESHOLD = 4
 def main():
     cv2.namedWindow(WINDOW_NAME)
     vc = cv2.VideoCapture(1)
@@ -22,7 +22,10 @@ def main():
     while rval:
         # if image has stabilized, solve
         if has_stabilized(prev_frames):
-            do_solve(frame)
+            rect_frame = do_solve(frame)
+            cv2.imshow(WINDOW_NAME, rect_frame)
+        else:     
+            cv2.imshow(WINDOW_NAME, frame)
 
         # get new frame and add to stack of frames
         rval, frame = vc.read()
@@ -49,14 +52,15 @@ def has_stabilized(frames):
 def do_solve(frame):
     # do set stuff
     cards = ss.detect_cards(frame, draw_rects=True)
-    cv2.imshow(WINDOW_NAME, frame)
     
     if(len(cards) < 1):
-        return 
+        return frame
 
     # get property of cards and print
     props = ss.get_card_properties(cards)
     print_properties(props)
+
+    return frame
 
 def print_properties(props):
     if len(props) > 0:
