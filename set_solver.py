@@ -131,28 +131,16 @@ def find_contours(bin_img, num=-1, return_area=False):
 
     return contours
 
-# get grayscale and slightly blurred image to remove noise
-
-
-def preprocess(img):
-    # grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # gaussian blur to remove noise
-    blur = cv2.GaussianBlur(gray, ksize=(5, 5), sigmaX=0)
-
-    return blur
-
 
 def get_binary(img, thresh=150):
-    preprocessed = preprocess(img)
+    preprocessed = util.preprocess(img)
     _, threshold = cv2.threshold(
         preprocessed, thresh=thresh, maxval=255, type=cv2.THRESH_BINARY)
     return threshold
 
 
 def get_canny(img):
-    preprocessed = preprocess(img)
+    preprocessed = util.preprocess(img)
     canny = cv2.Canny(preprocessed, threshold1=200, threshold2=50)
     dilated = cv2.dilate(canny, (10, 10))
     return dilated

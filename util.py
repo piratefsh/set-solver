@@ -45,3 +45,13 @@ def draw_contour(c, i):
 def resize(src, shape):
     dest = cv2.resize(src, (shape[1], shape[0]))
     return dest
+
+# get grayscale and slightly blurred image to remove noise
+def preprocess(img):
+    # grayscale
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # gaussian blur to remove noise
+    blur = cv2.GaussianBlur(gray, ksize=(5, 5), sigmaX=0)
+
+    return blur
