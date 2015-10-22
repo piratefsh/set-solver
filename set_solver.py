@@ -7,7 +7,10 @@ import os
 import code
 import set_constants as sc
 
-def get_card_properties(cards, training_set):
+def get_card_properties(cards, training_set=None):
+
+    training_set = get_training_set()
+
     properties = []
     for img in cards:
         num =  get_card_number(img)
@@ -25,7 +28,7 @@ def pretty_print_properties(properties):
          sc.PROP_SHAPE_MAP[shape], sc.PROP_TEXTURE_MAP[texture])
 
 
-def detect_cards(img, draw_rects = False):
+def detect_cards(img, draw_rects=False):
     if img is None:
         return None 
     img_binary = get_binary(img)
@@ -48,7 +51,7 @@ def transform_cards(img, contours, num, draw_rects=False):
         r = [(int(x), int(y)) for x,y in r]
 
         if draw_rects:
-            cv2.rectangle(img, r[0], r[2], COLOR_RED)
+            cv2.rectangle(img, r[0], r[2], sc.COLOR_RED)
 
         try:
             transformed = transform_card(card, img)
@@ -152,6 +155,12 @@ def get_card_shape(card, training_set, thresh=150):
     # binary = get_binary(card, thresh=thresh)
     binary = get_canny(card)
     contours = find_contours(binary)
+
+    # if canny doesn't give enough contours, fallback to binary
+    if len(contours) < 2:
+        binary = get_binary(card)
+        contours = find_contours(binary)
+
     poly = get_approx_poly(contours[1], do_rectify=False)
 
     # for each card in trainings set, find one with most similarity 
@@ -174,15 +183,29 @@ def get_card_shape(card, training_set, thresh=150):
 def get_shape_image(img):
     binary = get_canny(img)
     contours = find_contours(binary)
+
+    # if canny doesn't give enough contours, fallback to binary
+    if len(contours) < 2:
+        binary = get_binary(img)
+        contours = find_contours(binary)
+    
     shape_contour = contours[1]
     shape_img = util.draw_contour(contours, 1)
     x,y,w,h = cv2.boundingRect(shape_contour)
     cropped = shape_img[y:y+h, x:x+w]
     return cropped
 
-def train_cards(imgs):
-    training_set = {}
+def get_training_set():
+    # train cards
+    shape_diamond = cv2.imread('images/training/diamond.jpg')
+    shape_oblong = cv2.imread('images/training/oblong.jpg')
+    shape_squiggle = cv2.imread('images/training/squiggle.jpg')
+    training_set = do_training([shape_diamond, shape_oblong, shape_squiggle])
+    return training_set
+
+def do_training(imgs):
     # train for shapes, return contours of shapes
+    training_set = {}
     for i in range(len(imgs)):
         img = imgs[i]
         shape = get_shape_image(img)
@@ -192,7 +215,6 @@ def train_cards(imgs):
 def get_dropoff(array, maxratio=1.1):
     """Given array of values, return the index of the element where the ratio of each elem to the next drops off (assuming sorted input)"""
 
-    # add small differential to avoid dividing by zero
     array = [e for e in array if e > 0]
 
     ratios = np.divide(array, array[1:] + [1])
