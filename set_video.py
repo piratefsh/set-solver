@@ -41,13 +41,16 @@ def has_stabilized(frames):
     preprocessed = map(lambda x: util.preprocess(x), frames)
     sum_diff = 0
 
+    # find sum of diff for each pair of consequent frames
     for i in range(len(preprocessed)):
         if i + 1 > len(preprocessed) - 1:
             break
         diff = cv2.absdiff(preprocessed[i], preprocessed[i + 1])
         sum_diff += np.sum(diff)
 
-    return sum_diff/len(preprocessed)/preprocessed[0].size < MOVEMENT_THRESHOLD
+    # normalize diff by number of pixels and frames
+    movement = sum_diff/len(preprocessed)/preprocessed[0].size
+    return movement < MOVEMENT_THRESHOLD
 
 def do_solve(frame):
     # do set stuff
