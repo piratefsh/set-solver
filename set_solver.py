@@ -182,7 +182,7 @@ def get_card_shape(card, training_set, thresh=150):
 
     # for each card in trainings set, find one with most similarity
     diffs = []
-    this_shape = get_shape_image(card)
+    this_shape = get_shape_contour(card)
     for i, that_shape in training_set.items():
 
         # resize image
@@ -198,7 +198,7 @@ def get_card_shape(card, training_set, thresh=150):
     return diffs.index(min(diffs)) + 1
 
 
-def get_shape_image(img):
+def get_shape_contour(img):
     binary = get_canny(img)
     contours = find_contours(binary)
 
@@ -228,7 +228,7 @@ def do_training(imgs):
     training_set = {}
     for i in range(len(imgs)):
         img = imgs[i]
-        shape = get_shape_image(img)
+        shape = get_shape_contour(img)
         training_set[i] = shape
     return training_set
 
