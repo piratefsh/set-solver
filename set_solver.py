@@ -19,9 +19,9 @@ def get_card_properties(cards, training_set=None):
         shape = get_card_shape(img, training_set)
         texture = get_card_texture(img)
         p = (num, color, shape, texture)
-        properties.append(p)
+        if None not in p:
+            properties.append(p) 
     return properties
-
 
 def pretty_print_properties(properties):
     for p in properties:
@@ -46,6 +46,8 @@ def detect_cards(img, draw_rects=False):
 def transform_cards(img, contours, num, draw_rects=False):
     cards = []
     for i in xrange(num):
+        if i > len(contours) - 1:
+            continue
         card = contours[i]
 
         # get bounding rectangle
@@ -60,10 +62,12 @@ def transform_cards(img, contours, num, draw_rects=False):
 
         try:
             transformed = transform_card(card, img)
-            cards.append(transformed)
         except:
-            print 'Error processing card!! :o'
+            # print 'Error processing card!! :o'
             continue
+        
+        if transformed is not None:
+            cards.append(transformed)
 
     return cards
 
@@ -75,7 +79,12 @@ def transform_card(card, image):
         sc.SIZE_CARD_W, sc.SIZE_CARD_H], [0, sc.SIZE_CARD_H]]
 
     # get poly of contour
-    approximated_poly = get_approx_poly(card)
+    approximated_poly = get_approx_poly(card, do_rectify=True)
+
+    if approximated_poly is None:
+        # could not find card poly 
+        return None
+
     dest = np.array(card_shape, np.float32)
 
     # do transformatiom
@@ -107,7 +116,8 @@ def get_approx_poly(card, do_rectify=True, image=None):
         if reapproximated_poly.all():
             approximated_poly = reapproximated_poly
         else:
-            print 'Not rectified!'
+            #print 'Not rectified!'
+            return None
     return approximated_poly
 
 
@@ -176,6 +186,9 @@ def get_card_shape(card, training_set, thresh=150):
     if len(contours) < 2:
         binary = get_binary(card)
         contours = find_contours(binary)
+        # if still not enough contours, consider invalid
+        if len(contours) < 2:
+            return None
 
     poly = get_approx_poly(contours[1], do_rectify=False)
 
@@ -256,6 +269,10 @@ def get_dropoff(array, maxratio=1.1):
 def get_card_number(card):
     binary = get_binary(card, thresh=180)
     contours = find_contours(binary)
+
+    if len(contours) < 2:
+        return None 
+
     poly = get_approx_poly(contours[1], do_rectify=False)
 
     # forget about first outline of card
@@ -267,7 +284,12 @@ def get_card_number(card):
 def get_card_texture(card, square=20):
 
     binary = get_binary(card, thresh=150)
-    contour = find_contours(binary)[1]
+    contours = find_contours(binary)
+
+    if len(contours) < 2:
+        return None 
+    
+    contour = contours[1]
 
     # get bounding rectangle
     rect = cv2.boundingRect(contour)
