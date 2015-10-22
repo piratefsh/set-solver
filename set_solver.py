@@ -25,6 +25,17 @@ PROP_TEXTURE_EMPTY = 2
 PROP_TEXTURE_SOLID = 3
 PROP_TEXTURE_MAP = ['_', 'STRIPED', 'EMPTY', 'SOLID']
 
+def resize_image(img, max_dim):
+    """Given cv2 image object and maximum dimension, returns resized image such that height or width (whichever is larger) == max dimension"""
+    h, w, d = img.shape
+    largest_dim = max(h,w)
+    if largest_dim < max_dim:
+        return img
+    else:
+        scalar = float(max_dim) / largest_dim
+        new_dim = tuple( int(n*scalar) for n in (h,w) )
+        return cv2.resize(img, new_dim)
+
 def get_card_properties(cards, training_set):
     properties = []
     for img in cards:
@@ -43,15 +54,20 @@ def pretty_print_properties(properties):
          PROP_SHAPE_MAP[shape], PROP_TEXTURE_MAP[texture])
 
 
-def detect_cards(img, draw_rects = False):
+def detect_cards(img, draw_rects = False, return_contours=False):
     if img is None:
-        return None 
+        return None
 
     img_binary = get_binary(img)
     contours = find_contours(img_binary)
     num_cards = get_dropoff([cv2.contourArea(c) for c in contours], maxratio=1.5)
 
-    return transform_cards(img, contours, num_cards, draw_rects=draw_rects)
+    transformed_cards = transform_cards(img, contours, num_cards, draw_rects=draw_rects)
+
+    if return_contours:
+        return (contours, transformed_cards)
+    else:
+        return transformed_cards
 
 def transform_cards(img, contours, num, draw_rects=False):
     cards = []
@@ -63,7 +79,7 @@ def transform_cards(img, contours, num, draw_rects=False):
         r = cv.BoxPoints(rect)
 
         # convert to ints
-        r = [(int(x), int(y)) for x,y in r]
+        r = [ (int(x), int(y)) for x,y in r ]
 
         if draw_rects:
             cv2.rectangle(img, r[0], r[2], COLOR_RED)
@@ -79,22 +95,22 @@ def transform_cards(img, contours, num, draw_rects=False):
 
 def transform_card(card, image):
     # find out if card is rotated
-    x, y, w, h = cv2.boundingRect(card) 
+    x, y, w, h = cv2.boundingRect(card)
     card_shape = [[0,0], [SIZE_CARD_W,0], [SIZE_CARD_W, SIZE_CARD_H], [0,SIZE_CARD_H]]
 
     # get poly of contour
     approximated_poly = get_approx_poly(card)
     dest = np.array(card_shape, np.float32)
-    
+
     # do transformatiom
     transformation = cv2.getPerspectiveTransform(approximated_poly, dest)
     warp = cv2.warpPerspective(image, transformation, SIZE_CARD)
-    
+
     # rotate card back up
     if (w > h):
         return util.resize(np.rot90(warp), (SIZE_CARD_H, SIZE_CARD_W))
 
-    return warp 
+    return warp
 
 def get_approx_poly(card, do_rectify=True, image=None):
     perimeter = cv2.arcLength(card, True)
@@ -145,7 +161,7 @@ def get_card_color(card):
     red = [pix[2] for row in card for pix in row ]
 
     bgr = (min(blue), min(green), min(red))
-    b, g, r = bgr 
+    b, g, r = bgr
     # if mostly green
     if max(bgr) == g:
         return PROP_COLOR_GREEN
@@ -155,7 +171,7 @@ def get_card_color(card):
         return PROP_COLOR_RED
 
     # else, probably purple
-    return PROP_COLOR_PURPLE 
+    return PROP_COLOR_PURPLE
 
 def get_card_shape(card, training_set, thresh=170):
     binary = get_binary(card, thresh=thresh)
@@ -163,7 +179,7 @@ def get_card_shape(card, training_set, thresh=170):
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], do_rectify=False)
 
-    # for each card in trainings set, find one with most similarity 
+    # for each card in trainings set, find one with most similarity
     diffs = []
     this_shape = get_shape_image(card)
     for i, that_shape in training_set.items():
