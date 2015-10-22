@@ -5,25 +5,7 @@ import numpy as np
 import util as util
 import os
 import code
-
-COLOR_RED = (0, 0, 255)
-SIZE_CARD = (64*3, 89*3)
-SIZE_CARD_W, SIZE_CARD_H = SIZE_CARD
-
-PROP_COLOR_RED = 1
-PROP_COLOR_GREEN = 2
-PROP_COLOR_PURPLE = 3
-PROP_COLOR_MAP = ['_', 'RED', 'GREEN', 'PURPLE']
-
-PROP_SHAPE_DIAMOND = 1
-PROP_SHAPE_OBLONG = 2
-PROP_SHAPE_SQUIGGLE = 3
-PROP_SHAPE_MAP = ['_', 'DIAMOND', 'OBLONG', 'SQUIGGLE']
-
-PROP_TEXTURE_STRIPED = 1
-PROP_TEXTURE_EMPTY = 2
-PROP_TEXTURE_SOLID = 3
-PROP_TEXTURE_MAP = ['_', 'STRIPED', 'EMPTY', 'SOLID']
+import set_constants as sc
 
 def get_card_properties(cards, training_set):
     properties = []
@@ -39,8 +21,8 @@ def get_card_properties(cards, training_set):
 def pretty_print_properties(properties):
     for p in properties:
         num, color, shape, texture = p 
-        print '%d %s %s %s' % (num, PROP_COLOR_MAP[color],\
-         PROP_SHAPE_MAP[shape], PROP_TEXTURE_MAP[texture])
+        print '%d %s %s %s' % (num, sc.PROP_COLOR_MAP[color],\
+         sc.PROP_SHAPE_MAP[shape], sc.PROP_TEXTURE_MAP[texture])
 
 
 def detect_cards(img, draw_rects = False):
@@ -80,7 +62,7 @@ def transform_cards(img, contours, num, draw_rects=False):
 def transform_card(card, image):
     # find out if card is rotated
     x, y, w, h = cv2.boundingRect(card) 
-    card_shape = [[0,0], [SIZE_CARD_W,0], [SIZE_CARD_W, SIZE_CARD_H], [0,SIZE_CARD_H]]
+    card_shape = [[0,0], [sc.SIZE_CARD_W,0], [sc.SIZE_CARD_W, sc.SIZE_CARD_H], [0, sc.SIZE_CARD_H]]
 
     # get poly of contour
     approximated_poly = get_approx_poly(card)
@@ -88,11 +70,11 @@ def transform_card(card, image):
     
     # do transformatiom
     transformation = cv2.getPerspectiveTransform(approximated_poly, dest)
-    warp = cv2.warpPerspective(image, transformation, SIZE_CARD)
+    warp = cv2.warpPerspective(image, transformation, sc.SIZE_CARD)
     
     # rotate card back up
     if (w > h):
-        return util.resize(np.rot90(warp), (SIZE_CARD_H, SIZE_CARD_W))
+        return util.resize(np.rot90(warp), (sc.SIZE_CARD_H, sc.SIZE_CARD_W))
 
     return warp 
 
@@ -157,14 +139,14 @@ def get_card_color(card):
     b, g, r = bgr 
     # if mostly green
     if max(bgr) == g:
-        return PROP_COLOR_GREEN
+        return sc.PROP_COLOR_GREEN
 
     # if a lot more red than blue, is probably red
     if b != 0 and r/b > 2:
-        return PROP_COLOR_RED
+        return sc.PROP_COLOR_RED
 
     # else, probably purple
-    return PROP_COLOR_PURPLE 
+    return sc.PROP_COLOR_PURPLE 
 
 def get_card_shape(card, training_set, thresh=150):
     # binary = get_binary(card, thresh=thresh)
@@ -250,11 +232,11 @@ def get_card_texture(card, square=20):
     pixel_std = np.std(gray_rect)
 
     if pixel_std > 4.5:
-        return PROP_TEXTURE_STRIPED
+        return sc.PROP_TEXTURE_STRIPED
 
     elif np.mean(gray_rect) > 150:
-        return PROP_TEXTURE_EMPTY
+        return sc.PROP_TEXTURE_EMPTY
 
     else:
-        return PROP_TEXTURE_SOLID
+        return sc.PROP_TEXTURE_SOLID
 
