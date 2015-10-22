@@ -147,6 +147,7 @@ def get_canny(img):
 
 
 def get_card_color(card):
+    card = get_shape_only(card)
     blue = [pix[0] for row in card for pix in row]
     green = [pix[1] for row in card for pix in row]
     red = [pix[2] for row in card for pix in row]
@@ -197,8 +198,8 @@ def get_card_shape(card, training_set, thresh=150):
     # return index of shape that has minimum difference
     return diffs.index(min(diffs)) + 1
 
-
-def get_shape_contour(img):
+# get bounding rect coords
+def get_shape_bounding_rect(img):
     binary = get_canny(img)
     contours = find_contours(binary)
 
@@ -208,11 +209,21 @@ def get_shape_contour(img):
         contours = find_contours(binary)
 
     shape_contour = contours[1]
-    shape_img = util.draw_contour(contours, 1)
     x, y, w, h = cv2.boundingRect(shape_contour)
-    cropped = shape_img[y:y+h, x:x+w]
+    return (y, y+h, x, x+w, contours)
+
+# cropped out contour of shape
+def get_shape_contour(img):
+    y1, y2, x1, x2, contours = get_shape_bounding_rect(img)
+    shape_img = util.draw_contour(contours, 1)
+    cropped = shape_img[y1:y2, x1:x2]
     return cropped
 
+# cropped out image of shape
+def get_shape_only(img):
+    y1, y2, x1, x2, _ = get_shape_bounding_rect(img)
+    cropped = img[y1:y2, x1:x2]
+    return cropped
 
 def get_training_set():
     # train cards
