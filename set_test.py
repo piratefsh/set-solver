@@ -68,7 +68,7 @@ class game:
                 sets.append(map(lambda x: self.cards[x], cards_idx))
         return sets
 
-    def play(self, prnt=False):
+    def play(self):
         results = self.compare_all()
         if len(results) > 0:
             return results

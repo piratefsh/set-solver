@@ -82,6 +82,7 @@ def main():
     g = game(cards=props)
     sets = g.play(prnt=True)
     if sets:
+        print 'Found sets'
         for st in sets:
             s.pretty_print_properties(st)
             print('---')

@@ -46,12 +46,12 @@ def pretty_print_properties(properties):
 def detect_cards(img, draw_rects = False):
     if img is None:
         return None 
-
     img_binary = get_binary(img)
     contours = find_contours(img_binary)
     num_cards = get_dropoff([cv2.contourArea(c) for c in contours], maxratio=1.5)
-
-    return transform_cards(img, contours, num_cards, draw_rects=draw_rects)
+    cards = transform_cards(img, contours, num_cards, draw_rects=draw_rects)
+    
+    return cards
 
 def transform_cards(img, contours, num, draw_rects=False):
     cards = []
@@ -127,17 +127,26 @@ def find_contours(bin_img, num=-1, return_area=False):
 
     return contours
 
-def get_binary(img, thresh=150):
+# get grayscale and slightly blurred image to remove noise
+def preprocess(img):
     # grayscale
-    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # gaussian blur to remove noise
-    img_blur = cv2.GaussianBlur(img_gray, ksize=(3,3), sigmaX=0)
+    blur = cv2.GaussianBlur(gray, ksize=(5,5), sigmaX=0)
 
-    # threshold
-    flag, img_threshold = cv2.threshold(img_blur, thresh=thresh, maxval=255, type=cv2.THRESH_BINARY)
+    return blur
 
-    return img_threshold
+def get_binary(img, thresh=150):
+    preprocessed = preprocess(img)
+    _, threshold = cv2.threshold(preprocessed, thresh=thresh, maxval=255, type=cv2.THRESH_BINARY)
+    return threshold
+
+def get_canny(img):
+    preprocessed = preprocess(img)
+    canny = cv2.Canny(preprocessed, threshold1=200, threshold2=50)
+    dilated = cv2.dilate(canny, (10,10))
+    return dilated
 
 def get_card_color(card):
     blue = [pix[0] for row in card for pix in row ]
@@ -157,9 +166,9 @@ def get_card_color(card):
     # else, probably purple
     return PROP_COLOR_PURPLE 
 
-def get_card_shape(card, training_set, thresh=170):
-    binary = get_binary(card, thresh=thresh)
-
+def get_card_shape(card, training_set, thresh=150):
+    # binary = get_binary(card, thresh=thresh)
+    binary = get_canny(card)
     contours = find_contours(binary)
     poly = get_approx_poly(contours[1], do_rectify=False)
 
@@ -181,7 +190,7 @@ def get_card_shape(card, training_set, thresh=170):
     return diffs.index(min(diffs)) + 1
 
 def get_shape_image(img):
-    binary = get_binary(img)
+    binary = get_canny(img)
     contours = find_contours(binary)
     shape_contour = contours[1]
     shape_img = util.draw_contour(contours, 1)
