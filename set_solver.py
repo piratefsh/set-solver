@@ -148,6 +148,10 @@ def get_canny(img):
 
 def get_card_color(card):
     card = get_shape_only(card)
+
+    if card is None:
+        return None 
+        
     blue = [pix[0] for row in card for pix in row]
     green = [pix[1] for row in card for pix in row]
     red = [pix[2] for row in card for pix in row]
@@ -207,6 +211,8 @@ def get_shape_bounding_rect(img):
     if len(contours) < 2:
         binary = get_binary(img)
         contours = find_contours(binary)
+        if len(contours) < 2:
+            return None
 
     shape_contour = contours[1]
     x, y, w, h = cv2.boundingRect(shape_contour)
@@ -214,14 +220,24 @@ def get_shape_bounding_rect(img):
 
 # cropped out contour of shape
 def get_shape_contour(img):
-    y1, y2, x1, x2, contours = get_shape_bounding_rect(img)
+    rect = get_shape_bounding_rect(img)
+
+    if rect is None:
+        return None 
+
+    y1, y2, x1, x2, contours = rect
     shape_img = util.draw_contour(contours, 1)
     cropped = shape_img[y1:y2, x1:x2]
     return cropped
 
 # cropped out image of shape
 def get_shape_only(img):
-    y1, y2, x1, x2, _ = get_shape_bounding_rect(img)
+    rect = get_shape_bounding_rect(img)
+
+    if rect is None:
+        return None 
+        
+    y1, y2, x1, x2, _ = rect
     cropped = img[y1:y2, x1:x2]
     return cropped
 
