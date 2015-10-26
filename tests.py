@@ -142,12 +142,11 @@ def play_game(file_in, printall=False, draw_contours=True, \
                         for idx in st_indices:
                             # set base thickness
                             thickness = 3
-                            print(idx)
-                            # count = counter[idx]
-                            # if count > 1:
-                            #     thickness += 6*counter[idx]
-                            # counter[idx] -= 1
-                            cv2.drawContours(img, contours, idx, color, thickness, offset=(idx/2, idx/2))
+                            count = counter[idx]
+                            if count > 1:
+                                thickness += 6*counter[idx]
+                            counter[idx] -= 1
+                            cv2.drawContours(img, contours, idx, color, thickness)
                             #cv2.drawContours(img, contours[idx]*3, -1, color, 3)
 
                     else:

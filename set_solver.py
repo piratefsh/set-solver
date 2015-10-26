@@ -11,8 +11,6 @@ def resize_image(img, new_width=600):
     """Given cv2 image object and maximum dimension, returns resized image such that height or width (whichever is larger) == max dimension"""
     h, w, _ = img.shape
     new_height = int((1.0*h/w)*new_width)
-    resize = np.zeros((new_width, new_height))
-    print (new_width, new_height)
     resized = cv2.resize(img, (new_width, new_height))
 
     return resized
@@ -50,10 +48,8 @@ def detect_cards(img, draw_rects=False, return_contours=False):
     transformed_cards = transform_cards(img, contours, num_cards, draw_rects=draw_rects)
 
     if return_contours:
-        print 'contours'
         return (contours, transformed_cards)
     else:
-        print 'no contours'
         return (transformed_cards)
 
 def transform_cards(img, contours, num, draw_rects=False):
