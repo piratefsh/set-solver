@@ -104,7 +104,7 @@ def play_game(file_in, printall=False, draw_contours=True, \
     if draw_rects - draws box rects around cards belonging to each set
     if sets_or_no - outlines the image in green or red, depending on whether there are any sets present"""
     orig_img = cv2.imread(file_in)
-    img = s.resize_image(orig_img, 1000)
+    img = s.resize_image(orig_img, 900)
 
     contours, detected = s.detect_cards(img, draw_rects=False, \
                                         return_contours=True)
@@ -162,10 +162,23 @@ def play_game(file_in, printall=False, draw_contours=True, \
                         r = [ (int(x), int(y)) for x,y in cv.BoxPoints(rect) ]
                         cv2.rectangle(img, r[0], r[2], color)
 
-        util.show(img)
-
     else:
         print 'no sets :('
+
+    if sets_or_no:
+        height, width, _ = img.shape
+        BORDER_SCALAR = 0.01
+        border_h, border_w = ( int(dim*BORDER_SCALAR) for dim in (height, width))
+
+        # indices 0 or 1 correspond to bool for if no sets (BGR for red) or sets (green)
+        BORDER_COLORS = [ (19,19,214), (94,214,19) ]
+
+        img_outlined = cv2.copyMakeBorder(img, border_h, border_h, border_w, border_w,\
+                                          cv2.BORDER_CONSTANT, value = BORDER_COLORS[bool(sets)])
+        util.show(img_outlined)
+
+    else:
+        util.show(img)
 
 
 # inspired by http://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
