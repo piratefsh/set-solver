@@ -1,10 +1,7 @@
-import cv2
+import cv2, sys, os
 import cv2.cv as cv
-import sys
-import numpy as np 
+import numpy as np
 import util as util
-import os
-import code
 
 COLOR_RED = (0, 0, 255)
 SIZE_CARD = (64*3, 89*3)
