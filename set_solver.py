@@ -1,4 +1,4 @@
-import cv2
+import cv2, sys, os
 import cv2.cv as cv
 import sys
 import numpy as np
@@ -7,11 +7,19 @@ import os
 import code
 import set_constants as sc
 
+def resize_image(img, new_width=600):
+    """Given cv2 image object and maximum dimension, returns resized image such that height or width (whichever is larger) == max dimension"""
+    h, w, _ = img.shape
+    new_height = int((1.0*h/w)*new_width)
+    resize = np.zeros((new_width, new_height))
+    print (new_width, new_height)
+    resized = cv2.resize(img, (new_width, new_height))
+
+    return resized
 
 def get_card_properties(cards, training_set=None):
-
-    training_set = get_training_set()
-
+    if training_set == None:
+        training_set = get_training_set()
     properties = []
     for img in cards:
         num = get_card_number(img)
@@ -30,18 +38,23 @@ def pretty_print_properties(properties):
                                sc.PROP_SHAPE_MAP[shape],
                                sc.PROP_TEXTURE_MAP[texture])
 
-
-def detect_cards(img, draw_rects=False):
+def detect_cards(img, draw_rects=False, return_contours=False):
     if img is None:
         return None
+
     img_binary = get_binary(img)
     contours = find_contours(img_binary)
     num_cards = get_dropoff([cv2.contourArea(c)
                              for c in contours], maxratio=1.5)
     cards = transform_cards(img, contours, num_cards, draw_rects=draw_rects)
+    transformed_cards = transform_cards(img, contours, num_cards, draw_rects=draw_rects)
 
-    return cards
-
+    if return_contours:
+        print 'contours'
+        return (contours, transformed_cards)
+    else:
+        print 'no contours'
+        return (transformed_cards)
 
 def transform_cards(img, contours, num, draw_rects=False):
     cards = []
@@ -96,7 +109,6 @@ def transform_card(card, image):
         return util.resize(np.rot90(warp), (sc.SIZE_CARD_H, sc.SIZE_CARD_W))
 
     return warp
-
 
 def get_approx_poly(card, do_rectify=True, image=None):
     perimeter = cv2.arcLength(card, True)
