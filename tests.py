@@ -1,4 +1,4 @@
-import cv2, util, random
+import cv2, util
 import set_solver as s
 import set_constants as sc
 import cv2.cv as cv
@@ -122,7 +122,7 @@ def play_game(file_in, printall=False, draw_contours=True, \
     if sets:
         # choose a group of colors at random to represent the set of sets
         #COLORS = random.sample(BGR_RAINBOW, len(sets))
-        COLORS = random_color_palette(len(sets))
+        COLORS = util.random_color_palette(len(sets))
 
         if resize_contours:
             # count number of sets that each winning card index belongs to
@@ -179,43 +179,3 @@ def play_game(file_in, printall=False, draw_contours=True, \
         util.show(img)
 
 
-# inspired by http://martin.ankerl.com/2009/12/09/how-to-create-random-colors-programmatically/
-def random_color_palette(n, BGR=True):
-    """Generates a random, aesthetically pleasing set of n colors (list of BGR tuples - because opencv is silly - if BGR; else HSV)"""
-    SATURATION = 0.6
-    VALUE = 0.95
-    GOLDEN_RATIO_INVERSE = 0.618033988749895
-
-    # see: https://en.wikipedia.org/wiki/HSL_and_HSV#Converting_to_RGB
-    def hsv2bgr(hsv):
-        h, s, v = hsv
-        # compute chroma
-        c = v*s
-        h_prime = h*6.0
-        x = c*( 1 - abs(h_prime %2 - 1) )
-        if h_prime >= 5: rgb = (c,0,x)
-        elif h_prime >= 4: rgb = (x,0,c)
-        elif h_prime >= 3: rgb = (0,x,c)
-        elif h_prime >= 2: rgb = (0,c,x)
-        elif h_prime >= 1: rgb = (x,c,0)
-        else: rgb = (c,x,0)
-        m = v-c
-        rgb = tuple( 255.0*(val+m) for val in rgb )
-        # flip tuple to return (B,G,R)
-        return rgb[::-1]
-
-    # random float in [0.0, 1.0)
-    hue = random.random()
-    l_hues = [hue]
-
-    for i in xrange(n-1):
-        # generate evenly distributed hues by random walk using the golden ratio!
-        # (mod 1, to stay within hue space)
-        hue += GOLDEN_RATIO_INVERSE
-        hue %= 1
-        l_hues.append(hue)
-
-    if not BGR:
-        return [ (h, SATURATION, VALUE) for h in l_hues ]
-
-    return [ hsv2bgr((h, SATURATION, VALUE)) for h in l_hues ]
