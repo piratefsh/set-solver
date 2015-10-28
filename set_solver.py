@@ -7,9 +7,14 @@ import os
 import code
 import set_constants as sc
 
+reload(util)
+
 def resize_image(img, new_width=600):
     """Given cv2 image object and maximum dimension, returns resized image such that height or width (whichever is larger) == max dimension"""
     h, w, _ = img.shape
+    
+    if h > w: img = np.rot90(img)
+
     new_height = int((1.0*h/w)*new_width)
     resized = cv2.resize(img, (new_width, new_height))
 
@@ -331,3 +336,109 @@ def get_card_texture(card, square=20):
 
     else:
         return sc.PROP_TEXTURE_SOLID
+
+def get_binary_from_hsv(card):
+    # convert from BGR colorspace to HSV colorspace
+    hsv = cv2.cvtColor(card, cv2.COLOR_BGR2HSV)
+
+    # separate hue, saturation, and value into three images
+    hue, sat, val = [ np.array( [[col[i] for col in row] for row in hsv] ) \
+        for i in xrange(3) ]
+
+    # get binary representation of saturation image
+    # higher threshold = less white
+    _, bin_sat = cv2.threshold(np.array(sat), thresh=55, maxval=255, \
+        type=cv2.THRESH_BINARY)
+    #bin_sat = cv2.GaussianBlur(bin_sat, ksize=(5, 5), sigmaX=0)
+
+    # get binary representation of value image
+    # higher threshold = more white
+    _, bin_val = cv2.threshold(np.array(val), thresh=160, maxval=255, \
+        type=cv2.THRESH_BINARY_INV)
+
+    bin_sat_val = cv2.bitwise_or(bin_sat, bin_val)
+
+    # erosion followed by morphological opening to erase noise and fill gaps
+    # in shapes
+    kernel_e = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,2))
+    kernel_d = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8))
+    bin_sat_val = cv2.erode(bin_sat_val, kernel_e)
+    bin_sat_val = cv2.morphologyEx(bin_sat_val, cv2.MORPH_CLOSE, kernel_d)
+
+    return bin_sat_val, hue, sat, val
+
+def get_card_properties_v2(card, debug=False):
+
+    # for convenience
+    card_w = sc.SIZE_CARD_W
+    card_h = sc.SIZE_CARD_H
+
+    # convert to HSV colorspace and get binary representation of image
+    bin_sat_val, hue, sat, val = get_binary_from_hsv(card)
+
+    # find contours and get area
+    contours = find_contours(bin_sat_val, 4)
+    contours_area = [cv2.contourArea(c) for c in contours]
+
+    # if we're selected the outline of the card as a contour, discard
+    if contours_area[0] > card_w * card_h * .9:
+        contours_area = contours_area[1:]
+
+    if (debug):
+        test = np.copy(card)
+        cv2.drawContours(test, contours, -1, (0, 0, 255))
+        util.show(test)
+
+    prop_num = get_dropoff(contours_area, maxratio=1.05)
+
+    print 'NUMBER: ', prop_num
+
+    # crop image so we're only looking at the bounding rectangle
+    x, y, w, h = cv2.boundingRect(contours[0])
+    hue_crop = hue[y:y+h, x:x+w]
+
+    if (debug):
+        util.show(hue_crop)
+
+    # get histogram of hue values
+    hist, _ = np.histogram(hue_crop, 256, (0, 255))
+
+    print sum(hist[150:181])
+
+    if sum(hist[150:181]) > 600:
+        prop_col = 'purple'
+    elif sum(hist[40:81]) > 600:
+        prop_col = 'green'
+    else:
+        prop_col = 'red'
+
+    print 'COLOR: ', prop_col
+
+    # get a 20x20 square from each of the corners of the card, average values
+    hue_bg = np.mean([
+        hue[0:20, 0:20], hue[card_h-20:card_h, card_w-20:card_w],
+        hue[0:20, card_w-20:card_w], hue[card_h-20:card_h, 0:20]])
+
+    # get a 20x20 square from the center of the shape, average values
+    hue_center = np.mean(hue[y+h/2-10:y+h/2+10, x+w/2-10:x+w/2+10])
+
+    # guess texture based on ratio of inside to outside hues
+    hue_ratio = max(hue_bg, hue_center) / min(hue_bg, hue_center)
+    if hue_ratio < 1.3: prop_tex = 'empty'
+    elif hue_ratio < 2.5: prop_tex = 'striped'
+    else: prop_tex = 'solid'
+
+    print 'TEXTURE: ', prop_tex
+
+    # now it's shape time!!!
+
+    # list of contours (only contains the first contour, really) shifted so
+    # that they can be drawn in a box the size of the bounding box
+    contours_shifted = [np.array(
+        [[[j[0]-x, j[1]-y] for j in i] for i in contours[0]])]
+
+    # create image with filled contour
+    shape_img = util.draw_contour(contours_shifted, 0, h, w)
+
+    util.show(card)
+    util.show(shape_img)
