@@ -45,8 +45,9 @@ def detect_cards(img, draw_rects=False, return_contours=False):
     if img is None:
         return None
 
-    img_binary = get_binary(img)
-    contours = find_contours(img_binary)
+    img_binary = get_canny(img)
+    contours = get_contour_info(img_binary, discard=False, num=-1)[0]
+    #contours = find_contours(img_binary)
     num_cards = get_dropoff([cv2.contourArea(c)
                              for c in contours], maxratio=1.5)
     cards = transform_cards(img, contours, num_cards, draw_rects=draw_rects)
@@ -353,27 +354,27 @@ def get_binary_from_hsv(card):
 
     # get binary representation of value image
     # higher threshold = more white
-    _, bin_val = cv2.threshold(np.array(val), thresh=160, maxval=255, \
+    _, bin_val = cv2.threshold(np.array(val), thresh=140, maxval=255, \
         type=cv2.THRESH_BINARY_INV)
 
     bin_sat_val = cv2.bitwise_or(bin_sat, bin_val)
 
     # erosion followed by morphological opening to erase noise and fill gaps
     # in shapes
-    kernel_e = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,2))
+    kernel_e = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(2,2))
     kernel_d = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(8,8))
     bin_sat_val = cv2.erode(bin_sat_val, kernel_e)
     bin_sat_val = cv2.morphologyEx(bin_sat_val, cv2.MORPH_CLOSE, kernel_d)
 
     return bin_sat_val, hue, sat, val
 
-def get_contour_info(bin_img, remove_dups=True):
+def get_contour_info(bin_img, remove_dups=True, discard=True, num=4):
     # find contours and get area
-    contours = find_contours(bin_img, 4)
+    contours = find_contours(bin_img, num)
     contour_areas = [cv2.contourArea(c) for c in contours]
 
     # if we've selected the outline of the card as a contour, discard
-    if contour_areas[0] > sc.SIZE_CARD_W * sc.SIZE_CARD_H * .9:
+    if discard and contour_areas[0] > sc.SIZE_CARD_W * sc.SIZE_CARD_H * .9:
         contours = contours[1:]
         contour_areas = contour_areas[1:]
 
@@ -411,10 +412,9 @@ def get_contour_info(bin_img, remove_dups=True):
 
 def get_color_from_hue(hue):
     # get histogram of hue values
-    # hist, _ = np.histogram(hue, 256, (0, 255))
     hist,_ = np.histogram(hue, 15, (0, 255))
 
-    if hist[3]+hist[4] > 1500:
+    if hist[3]+hist[4] > 1200:
         return sc.PROP_COLOR_GREEN
     elif hist[8]+hist[9] > 250:
         return sc.PROP_COLOR_PURPLE
@@ -486,10 +486,11 @@ def get_card_properties_v2(card, debug=False):
 
     # convert to HSV colorspace and get binary representation of image
     bin_sat_val, hue, sat, val = get_binary_from_hsv(card)
+    binary = cv2.bitwise_or(bin_sat_val, get_canny(card))
 
     # get contours from binary image
     contours, contour_areas, \
-    contour_boxes, contour_centers = get_contour_info(bin_sat_val, True)
+    contour_boxes, contour_centers = get_contour_info(binary, True)
 
     # crop image so we're only looking at the bounding rectangle
     x, y, w, h = contour_boxes[0]

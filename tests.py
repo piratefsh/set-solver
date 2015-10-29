@@ -63,7 +63,7 @@ def main():
     assert res3bad is not None and len(res3bad) == 3
 
     # 12 cards
-    cards_12 = cv2.imread('images/set-12-random-2sets.jpg')
+    cards_12 = cv2.imread('images/set-12-random-90deg.jpg')
 
     thresh_12bad = s.get_binary(cards_12)
     res12bad = s.detect_cards(cards_12, draw_rects=False)
