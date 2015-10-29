@@ -367,52 +367,75 @@ def get_binary_from_hsv(card):
 
     return bin_sat_val, hue, sat, val
 
-def get_card_properties_v2(card, debug=False):
+def get_contour_info(bin_img, remove_dups=True):
+    # find contours and get area
+    contours = find_contours(bin_img, 4)
+    contour_areas = [cv2.contourArea(c) for c in contours]
 
+    # if we've selected the outline of the card as a contour, discard
+    if contour_areas[0] > sc.SIZE_CARD_W * sc.SIZE_CARD_H * .9:
+        contours = contours[1:]
+        contour_areas = contour_areas[1:]
+
+    # get bounding box and center point of each contour
+    contour_boxes = [cv2.boundingRect(c) for c in contours]
+    contour_centers = [(x+w/2, y+h/2) for x, y, w, h in contour_boxes]
+
+    # remove duplicates (similar center point)
+    # this is kinda poorly written, but basically we want to compare the
+    # center-point of each contour to make sure we're not double-counting
+    # any shapes. Might rewrite this later but probably won't
+    if remove_dups:
+        i = 0
+        while i < len(contour_centers):
+
+            c = contour_centers[i]
+            found_dup = False
+
+            for center in contour_centers[:i]:
+                x_dist = abs(center[0] - c[0])
+                y_dist = abs(center[1] - c[1])
+                if np.sqrt(x_dist**2 + y_dist**2) < 30:
+                    found_dup = True
+                    break
+
+            if found_dup:
+                contours.pop(i)
+                contour_areas.pop(i)
+                contour_boxes.pop(i)
+                contour_centers.pop(i)
+            else:
+                i = i+1
+
+    return contours, contour_areas, contour_boxes, contour_centers
+
+def get_color_from_hue(hue):
+    # get histogram of hue values
+    # hist, _ = np.histogram(hue, 256, (0, 255))
+    hist,_ = np.histogram(hue, 15, (0, 255))
+
+    if hist[3]+hist[4] > 1500:
+        return sc.PROP_COLOR_GREEN
+    elif hist[8]+hist[9] > 250:
+        return sc.PROP_COLOR_PURPLE
+    else:
+        return sc.PROP_COLOR_RED
+
+
+    # if sum(hist[130:181]) > 750:
+    #     return sc.PROP_COLOR_PURPLE
+    # elif sum(hist[40:81]) > 750:
+    #     return sc.PROP_COLOR_GREEN
+    # else:
+    #     return sc.PROP_COLOR_RED
+
+def get_texture_from_hue(hue, contour_box):
     # for convenience
     card_w = sc.SIZE_CARD_W
     card_h = sc.SIZE_CARD_H
 
-    # convert to HSV colorspace and get binary representation of image
-    bin_sat_val, hue, sat, val = get_binary_from_hsv(card)
-
-    # find contours and get area
-    contours = find_contours(bin_sat_val, 4)
-    contours_area = [cv2.contourArea(c) for c in contours]
-
-    # if we're selected the outline of the card as a contour, discard
-    if contours_area[0] > card_w * card_h * .9:
-        contours_area = contours_area[1:]
-
-    if (debug):
-        test = np.copy(card)
-        cv2.drawContours(test, contours, -1, (0, 0, 255))
-        util.show(test)
-
-    prop_num = get_dropoff(contours_area, maxratio=1.05)
-
-    print 'NUMBER: ', prop_num
-
-    # crop image so we're only looking at the bounding rectangle
-    x, y, w, h = cv2.boundingRect(contours[0])
-    hue_crop = hue[y:y+h, x:x+w]
-
-    if (debug):
-        util.show(hue_crop)
-
-    # get histogram of hue values
-    hist, _ = np.histogram(hue_crop, 256, (0, 255))
-
-    print sum(hist[150:181])
-
-    if sum(hist[150:181]) > 600:
-        prop_col = 'purple'
-    elif sum(hist[40:81]) > 600:
-        prop_col = 'green'
-    else:
-        prop_col = 'red'
-
-    print 'COLOR: ', prop_col
+    # uppack bounding box of contour
+    x, y, w, h = contour_box
 
     # get a 20x20 square from each of the corners of the card, average values
     hue_bg = np.mean([
@@ -424,21 +447,74 @@ def get_card_properties_v2(card, debug=False):
 
     # guess texture based on ratio of inside to outside hues
     hue_ratio = max(hue_bg, hue_center) / min(hue_bg, hue_center)
-    if hue_ratio < 1.3: prop_tex = 'empty'
-    elif hue_ratio < 2.5: prop_tex = 'striped'
-    else: prop_tex = 'solid'
+    if hue_ratio < 1.3:
+        return sc.PROP_TEXTURE_EMPTY
+    elif hue_ratio < 2.8:
+        return sc.PROP_TEXTURE_STRIPED
+    else:
+        return sc.PROP_TEXTURE_SOLID
 
-    print 'TEXTURE: ', prop_tex
-
-    # now it's shape time!!!
+def get_shape_from_contour(contour, contour_box):
+    # uppack bounding box of contour
+    x, y, w, h = contour_box
 
     # list of contours (only contains the first contour, really) shifted so
     # that they can be drawn in a box the size of the bounding box
     contours_shifted = [np.array(
-        [[[j[0]-x, j[1]-y] for j in i] for i in contours[0]])]
+        [[[j[0]-x, j[1]-y] for j in i] for i in contour])]
 
     # create image with filled contour
     shape_img = util.draw_contour(contours_shifted, 0, h, w)
 
-    util.show(card)
-    util.show(shape_img)
+    # for each card in trainings set, find one with most similarity
+    diffs = []
+    training_set = get_training_set()
+    for i, shape_ref in training_set.items():
+
+        # resize image
+        shape_img_res = util.resize(shape_img, shape_ref.shape)
+
+        # find diff and its sum
+        d = cv2.absdiff(shape_img_res, shape_ref)
+        sum_diff = np.sum(d)
+
+        diffs.append(sum_diff)
+
+    return diffs.index(min(diffs)) + 1
+
+def get_card_properties_v2(card, debug=False):
+
+    # convert to HSV colorspace and get binary representation of image
+    bin_sat_val, hue, sat, val = get_binary_from_hsv(card)
+
+    # get contours from binary image
+    contours, contour_areas, \
+    contour_boxes, contour_centers = get_contour_info(bin_sat_val, True)
+
+    # crop image so we're only looking at the bounding rectangle
+    x, y, w, h = contour_boxes[0]
+    hue_crop = hue[y:y+h, x:x+w]
+
+    #prop_num = get_number_from_contours(contour_areas, contour_centers)
+    prop_num = get_dropoff([b[2]*b[3] for b in contour_boxes], maxratio=1.2)
+    prop_col = get_color_from_hue(hue_crop)
+    prop_shp = get_shape_from_contour(contours[0], contour_boxes[0])
+    prop_tex = get_texture_from_hue(hue, contour_boxes[0])
+
+    if debug:
+        pretty_print_properties([(prop_num, prop_col, prop_shp, prop_tex)])
+        util.show(card)
+
+    return (prop_num, prop_col, prop_shp, prop_tex)
+
+def get_cards_properties(cards):
+    # if training_set == None:
+    #     training_set = get_training_set()
+
+    properties = []
+    for card in cards:
+        p = get_card_properties_v2(card)
+        if None not in p:
+            properties.append(p) 
+
+    return properties

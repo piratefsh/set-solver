@@ -76,7 +76,7 @@ def main():
         # test_props(card)
         cv2.imwrite('images/cards/card-12-%02d.jpg' % i, card)
 
-    props = s.get_card_properties(res12bad)
+    props = s.get_cards_properties(res12bad)
     s.pretty_print_properties(props)
 
     g = game(cards=props)
