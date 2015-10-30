@@ -1,11 +1,11 @@
-import cv2, util
+import cv2, util, requests, os
 import set_solver as s
 import set_constants as sc
 import cv2.cv as cv
 from set_test import game
 from collections import Counter
-import os
-import code
+import numpy as np
+import base64, Image, StringIO
 
 
 def test():
@@ -93,17 +93,24 @@ def main():
     print 'tests pass'
 
 
-def play_game(file_in, printall=False, draw_contours=True, \
-              resize_contours=True, draw_rects=False, \
-              sets_or_no=False):
-    """Takes in an image file, finds all sets, and pretty prints them to screen.
+def play_game(path_in, path_is_url=False, printall=False, \
+              draw_contours=True, resize_contours=True, \
+              draw_rects=False, sets_or_no=False, \
+              pop_open=True):
+    """Takes in an image path (to local file or onlin), finds all sets, and pretty prints them to screen.
     if printall - prints the identities of all cards in the image
     if draw_contours - outlines the cards belonging to each set
     if resize_contours - enlarges contours for cards belonging to multiple sets to avoid overlay
     if draw_rects - draws box rects around cards belonging to each set
     if sets_or_no - outlines the image in green or red, depending on whether there are any sets present"""
-    orig_img = cv2.imread(file_in)
-    img = s.resize_image(orig_img, 600)
+    if path_is_url:
+        # parse image string directly into numpy array
+        img_str = requests.get(path_in).content
+        nparr = np.fromstring(img_str, np.uint8)
+        img = cv2.imdecode(nparr, cv2.CV_LOAD_IMAGE_COLOR)
+
+    else:
+        img = cv2.imread(path_in)
 
     contours, detected = s.detect_cards(img, draw_rects=False, return_contours=True)
     props = s.get_card_properties(detected)
@@ -115,9 +122,9 @@ def play_game(file_in, printall=False, draw_contours=True, \
     sets = g.play(idx=True)
 
     # RED, ORANGE, YELLOW, GREEN, BLUE, //INDIGO,// VIOLET
-    BGR_RAINBOW = [ (0, 0, 255), (0, 127, 255), (0, 255, 255), \
-                    (0, 255, 0), (255, 0, 0), #(130, 0, 75),
-                    (255, 0, 139) ]
+    #BGR_RAINBOW = [ (0, 0, 255), (0, 127, 255), (0, 255, 255), \
+    #                (0, 255, 0), (255, 0, 0), #(130, 0, 75),
+    #                (255, 0, 139) ]
 
     if sets:
         # choose a group of colors at random to represent the set of sets
@@ -147,7 +154,6 @@ def play_game(file_in, printall=False, draw_contours=True, \
                                 thickness += 6*counter[idx]
                             counter[idx] -= 1
                             cv2.drawContours(img, contours, idx, color, thickness)
-                            #cv2.drawContours(img, contours[idx]*3, -1, color, 3)
 
                     else:
                         cv2.drawContours(img, winning_contours, -1, color, 3)
@@ -171,11 +177,46 @@ def play_game(file_in, printall=False, draw_contours=True, \
         # indices 0 or 1 correspond to bool for if no sets (BGR for red) or sets (green)
         BORDER_COLORS = [ (19,19,214), (94,214,19) ]
 
-        img_outlined = cv2.copyMakeBorder(img, border_h, border_h, border_w, border_w,\
-                                          cv2.BORDER_CONSTANT, value = BORDER_COLORS[bool(sets)])
-        util.show(img_outlined)
+        img_outlined = cv2.copyMakeBorder(img, border_h, border_h, \
+                                          border_w, border_w, \
+                                          cv2.BORDER_CONSTANT,
+                                          value = BORDER_COLORS[bool(sets)])
+        processed_img = img_outlined
 
     else:
-        util.show(img)
+        processed_img = img
+
+    final_img = s.resize_image(img, 800)
+
+    if pop_open: util.show(final_img)
+
+    num_sets = ( len(sets) if sets else 0 )
+
+    #img_str = cv2.imencode('.jpeg', final_img)[1].tostring()
+
+    #img_array = cv2.imencode('.jpeg', final_img)[1]
+    #img_str = base64.b64encode(img_array)
+    #py_img = Image.fromarray(img_array)
+
+    image = Image.fromarray(final_img)
+    output = StringIO.StringIO()
+    image.save(output, format='JPEG')
+    mystr = output.getvalue()
+    output.close()
+
+    cv2.imwrite('tmp.jpeg', final_img)
+
+    #final = 'data:image/jpeg;base64,' + \
+    #        base64.b64encode(mystr)
+    final = base64.b64encode(mystr)
+
+    #l = len(final)
+    #print 'length is {}'.format(l)
+    #print 'size is {} bytes'.format((l-814)/1.37)
+    # N.B.
+    # length is 123932
+    # size is 89867.1532847 bytes
+
+    return (num_sets, final)
 
 
