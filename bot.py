@@ -127,7 +127,7 @@ def send_tweet(text, response_id=None, media_str=None):
         if response_id: d_arguments['in_reply_to_status_id'] = response_id
 
         if media_str:
-            upload = api.media_upload(file=media_str, filename='myfile')
+            upload = api.media_upload(file=media_str, filename='filenames_are_for_dweebs')
             #upload = api.media_upload(filename='tmp.jpeg')
             d_arguments['media_ids'] = [upload.media_id_string]
 
