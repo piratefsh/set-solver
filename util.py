@@ -38,8 +38,8 @@ def rectify(h):
     return hnew
 
 # draw contour on empty image
-def draw_contour(c, i):
-    dest = np.zeros((500,300), np.float32)
+def draw_contour(c, i, h=500, w=300):
+    dest = np.zeros((h,w), np.float32)
     cv2.drawContours(dest, c, i, 255, cv2.cv.CV_FILLED)
     return dest
 
