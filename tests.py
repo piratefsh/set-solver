@@ -181,34 +181,27 @@ def play_game(path_in, path_is_url=False, printall=False, \
                                           border_w, border_w, \
                                           cv2.BORDER_CONSTANT,
                                           value = BORDER_COLORS[bool(sets)])
-        processed_img = img_outlined
 
-    else:
-        processed_img = img
+    processed_img = (img_outlined if sets_or_no else img)
 
-    final_img = s.resize_image(img, 800)
+    final_img = s.resize_image(processed_img, 800)
 
     if pop_open: util.show(final_img)
 
     num_sets = ( len(sets) if sets else 0 )
 
-    #img_str = cv2.imencode('.jpeg', final_img)[1].tostring()
-
-    #img_array = cv2.imencode('.jpeg', final_img)[1]
-    #img_str = base64.b64encode(img_array)
-    #py_img = Image.fromarray(img_array)
-
-    image = Image.fromarray(final_img)
+    # convert image array to string representing JPEG of image (in RGB)
+    image = Image.fromarray( cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB) )
     output = StringIO.StringIO()
     image.save(output, format='JPEG')
     mystr = output.getvalue()
     output.close()
 
-    cv2.imwrite('tmp.jpeg', final_img)
+    # don't write image to file, dude....because we are badass Tweepy hackers
+    #cv2.imwrite('tmp.jpeg', final_img)
 
-    #final = 'data:image/jpeg;base64,' + \
-    #        base64.b64encode(mystr)
-    final = base64.b64encode(mystr)
+    # encode image string to base64 and safe-encode it for Twitter upload request
+    final = requests.utils.quote(base64.b64encode(mystr), safe='')
 
     #l = len(final)
     #print 'length is {}'.format(l)
