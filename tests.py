@@ -113,7 +113,7 @@ def play_game(path_in, path_is_url=False, printall=False, \
         img = cv2.imread(path_in)
 
     contours, detected = s.detect_cards(img, draw_rects=False, return_contours=True)
-    props = s.get_card_properties(detected)
+    props = s.get_cards_properties(detected)
 
     if printall:
         s.pretty_print_properties(props)
