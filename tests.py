@@ -115,6 +115,9 @@ def play_game(path_in, path_is_url=False, printall=False, \
     else:
         img = cv2.imread(path_in)
 
+    img = s.resize_image(img, 600)
+    util.show(img)
+
     contours, detected = s.detect_cards(img, draw_rects=False, return_contours=True)
     props = s.get_cards_properties(detected)
 
@@ -187,7 +190,7 @@ def play_game(path_in, path_is_url=False, printall=False, \
 
     processed_img = (img_outlined if sets_or_no else img)
 
-    final_img = s.resize_image(processed_img, 800)
+    final_img = processed_img #s.resize_image(processed_img, 800)
 
     if pop_open: util.show(final_img)
 

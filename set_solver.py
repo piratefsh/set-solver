@@ -13,9 +13,7 @@ def resize_image(img, new_width=600):
     """Given cv2 image object and maximum dimension, returns resized image such that height or width (whichever is larger) == max dimension"""
     h, w, _ = img.shape
     
-    if h > w: img = np.rot90(img)
-
-    new_height = int((1.0*h/w)*new_width)
+    new_height = int((1.0 * h/w) * new_width)
     resized = cv2.resize(img, (new_width, new_height))
 
     return resized
