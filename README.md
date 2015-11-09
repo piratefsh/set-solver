@@ -71,3 +71,6 @@ python
 ## Known issues
 * Has issues detecting card properties when shadowed
 * Inaccurate detection with low-res image
+
+## <3
+Made at the [Recurse Center](https://www.recurse.com)
