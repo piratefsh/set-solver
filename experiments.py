@@ -9,6 +9,8 @@ CARD_SIZE_WIDTH = 64
 CARD_SIZE_HEIGHT = 89
 CARD_SIZE_RATIO = CARD_SIZE_WIDTH/CARD_SIZE_HEIGHT
 
+test = 2
+
 def canny(img):
     blurred = cv2.GaussianBlur(img, ksize=(5,5), sigmaX=0)
     edges = cv2.Canny(blurred, threshold1=200, threshold2=30)

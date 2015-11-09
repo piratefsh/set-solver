@@ -63,7 +63,7 @@ def main():
     assert res3bad is not None and len(res3bad) == 3
 
     # 12 cards
-    cards_12 = cv2.imread('images/set-12-random-90deg.jpg')
+    cards_12 = cv2.imread('images/set-12-random-2sets-sm.jpg')
 
     thresh_12bad = s.get_binary(cards_12)
     res12bad = s.detect_cards(cards_12, draw_rects=False)
@@ -80,12 +80,14 @@ def main():
     s.pretty_print_properties(props)
 
     g = game(cards=props)
-    sets = g.play()
+    sets = g.play(True)
 
     if sets:
         print '\nFound sets:'
         for st in sets:
-            s.pretty_print_properties(st)
+            just_props = [e for i, e in st]
+            print just_props
+            s.pretty_print_properties(just_props)
             print('---')
     else:
         print 'no sets :('
@@ -103,7 +105,7 @@ def play_game(file_in, printall=False, draw_contours=True, \
     if draw_rects - draws box rects around cards belonging to each set
     if sets_or_no - outlines the image in green or red, depending on whether there are any sets present"""
     orig_img = cv2.imread(file_in)
-    img = s.resize_image(orig_img, 600)
+    img = orig_img #s.resize_image(orig_img, 600)
 
     contours, detected = s.detect_cards(img, draw_rects=False, return_contours=True)
     props = s.get_card_properties(detected)
@@ -174,8 +176,11 @@ def play_game(file_in, printall=False, draw_contours=True, \
         img_outlined = cv2.copyMakeBorder(img, border_h, border_h, border_w, border_w,\
                                           cv2.BORDER_CONSTANT, value = BORDER_COLORS[bool(sets)])
         util.show(img_outlined)
+        cv2.imwrite('images/out.jpg', img_outlined)
 
     else:
         util.show(img)
+        cv2.imwrite('images/out.jpg', img)
+
 
 
