@@ -80,7 +80,7 @@ def transform_cards(img, contours, num, draw_rects=False):
         except:
             # print 'Error processing card!! :o'
             continue
-        
+
         if transformed is not None:
             cards.append(transformed)
 
@@ -164,8 +164,8 @@ def get_card_color(card):
     card = get_shape_only(card)
 
     if card is None:
-        return None 
-        
+        return None
+
     blue = [pix[0] for row in card for pix in row]
     green = [pix[1] for row in card for pix in row]
     red = [pix[2] for row in card for pix in row]
@@ -237,7 +237,7 @@ def get_shape_contour(img):
     rect = get_shape_bounding_rect(img)
 
     if rect is None:
-        return None 
+        return None
 
     y1, y2, x1, x2, contours = rect
     shape_img = util.draw_contour(contours, 1)
@@ -249,8 +249,8 @@ def get_shape_only(img):
     rect = get_shape_bounding_rect(img)
 
     if rect is None:
-        return None 
-        
+        return None
+
     y1, y2, x1, x2, _ = rect
     cropped = img[y1:y2, x1:x2]
     return cropped
@@ -276,7 +276,7 @@ def do_training(imgs):
 
 def get_dropoff(array, maxratio=1.1):
     """
-    Given array of values, return the index of the element 
+    Given array of values, return the index of the element
     where the ratio of each elem to the next drops off (assuming sorted input)
     """
 
@@ -300,7 +300,7 @@ def get_card_number(card):
     contours = find_contours(binary)
 
     if len(contours) < 2:
-        return None 
+        return None
 
     poly = get_approx_poly(contours[1], do_rectify=False)
 
@@ -316,8 +316,8 @@ def get_card_texture(card, square=20):
     contours = find_contours(binary)
 
     if len(contours) < 2:
-        return None 
-    
+        return None
+
     contour = contours[1]
 
     # get bounding rectangle
